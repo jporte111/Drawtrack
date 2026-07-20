@@ -15,11 +15,10 @@ export const statusConfig = {
   documents_received: { label: "Docs Received", className: "bg-amber-100 text-amber-700" },
   complete: { label: "Complete", className: "bg-emerald-100 text-emerald-700" },
   // Document
-  not_requested: { label: "Not Requested", className: "bg-slate-100 text-slate-400" },
-  requested: { label: "Requested", className: "bg-blue-100 text-blue-700" },
-  received: { label: "Received", className: "bg-amber-100 text-amber-700" },
+  missing: { label: "Missing", className: "bg-red-100 text-red-700" },
+  pending_signature: { label: "Pending Signature", className: "bg-amber-100 text-amber-700" },
+  needs_correction: { label: "Needs Correction", className: "bg-orange-100 text-orange-700" },
   approved: { label: "Approved", className: "bg-emerald-100 text-emerald-700" },
-  rejected: { label: "Rejected", className: "bg-red-100 text-red-700" },
   na: { label: "N/A", className: "bg-slate-200 text-slate-500" },
   // Open Item
   open: { label: "Open", className: "bg-red-100 text-red-700" },

@@ -42,9 +42,9 @@ export default function AddVendorDialog({ open, onOpenChange, drawId }) {
         status: "pending",
       });
       await base44.entities.Document.bulkCreate([
-        { draw_vendor_id: dv.id, document_type: "invoice", status: "not_requested" },
-        { draw_vendor_id: dv.id, document_type: "conditional_lien_release", status: "not_requested" },
-        { draw_vendor_id: dv.id, document_type: "unconditional_lien_release", status: "not_requested" },
+        { draw_vendor_id: dv.id, document_type: "invoice", status: "missing" },
+        { draw_vendor_id: dv.id, document_type: "conditional_lien_release", status: "missing" },
+        { draw_vendor_id: dv.id, document_type: "unconditional_lien_release", status: "missing" },
       ]);
       queryClient.invalidateQueries({ queryKey: ["drawVendors", drawId] });
       queryClient.invalidateQueries({ queryKey: ["documents"] });

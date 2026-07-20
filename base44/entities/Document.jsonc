@@ -16,15 +16,13 @@
     "status": {
       "type": "string",
       "enum": [
-        "not_requested",
-        "requested",
-        "received",
-        "approved",
-        "rejected",
+        "missing",
+        "pending_signature",
+        "needs_correction",
         "complete",
         "na"
       ],
-      "default": "not_requested"
+      "default": "missing"
     },
     "file_url": {
       "type": "string"

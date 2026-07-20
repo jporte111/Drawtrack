@@ -4,7 +4,7 @@ import { base44 } from "@/api/base44Client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { statusConfig } from "@/lib/statusConfig";
 
-const DOC_STATUSES = ["not_requested", "requested", "received", "approved", "rejected", "complete", "na"];
+const DOC_STATUSES = ["missing", "pending_signature", "needs_correction", "complete", "na"];
 
 export default function DocumentStatusCell({ doc, drawId }) {
   const queryClient = useQueryClient();
@@ -15,7 +15,7 @@ export default function DocumentStatusCell({ doc, drawId }) {
 
   const handleChange = async (status) => {
     const update = { status };
-    if ((status === "received" || status === "approved") && !doc.received_date) {
+    if ((status === "pending_signature" || status === "needs_correction" || status === "complete") && !doc.received_date) {
       update.received_date = new Date().toISOString().split("T")[0];
     }
     await base44.entities.Document.update(doc.id, update);
