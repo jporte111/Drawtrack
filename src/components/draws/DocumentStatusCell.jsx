@@ -4,7 +4,7 @@ import { base44 } from "@/api/base44Client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { statusConfig } from "@/lib/statusConfig";
 
-const DOC_STATUSES = ["not_requested", "requested", "received", "approved", "rejected"];
+const DOC_STATUSES = ["not_requested", "requested", "received", "approved", "rejected", "complete", "na"];
 
 export default function DocumentStatusCell({ doc, drawId }) {
   const queryClient = useQueryClient();

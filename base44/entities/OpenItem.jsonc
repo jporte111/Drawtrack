@@ -8,6 +8,9 @@
     "draw_vendor_id": {
       "type": "string"
     },
+    "document_id": {
+      "type": "string"
+    },
     "title": {
       "type": "string"
     },

@@ -20,7 +20,9 @@
         "requested",
         "received",
         "approved",
-        "rejected"
+        "rejected",
+        "complete",
+        "na"
       ],
       "default": "not_requested"
     },

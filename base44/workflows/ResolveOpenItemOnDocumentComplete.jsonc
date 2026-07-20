@@ -1,0 +1,40 @@
+{
+  "name": "Resolve Open Item on Document Complete",
+  "description": "When a Document's status changes to Complete or N/A, finds the related Open Item (linked by document_id) and sets its resolved date to today and status to resolved.",
+  "trigger": {
+    "config": {
+      "trigger_type": "entity",
+      "entity_name": "Document",
+      "events": [
+        "update"
+      ]
+    },
+    "condition": "${ (.trigger.data.status == \"complete\" or .trigger.data.status == \"na\") and (.trigger.changed_fields | index(\"status\") != null) }"
+  },
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "resolve_open_item_on_document_complete",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "resolve_open_item": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "resolveOpenItemFromDocument",
+            "args": {
+              "document_id": "${ .trigger.entity_id }"
+            }
+          },
+          "then": "end",
+          "x-base44": {
+            "title": "Resolve Open Item",
+            "description": "On document complete/N/A"
+          }
+        }
+      }
+    ]
+  }
+}
