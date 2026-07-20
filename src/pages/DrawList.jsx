@@ -1,0 +1,110 @@
+import React, { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
+import { base44 } from "@/api/base44Client";
+import { Plus, ChevronRight, FileWarning, DollarSign, FolderOpen, ClipboardList } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import StatusBadge from "@/components/StatusBadge";
+import { formatCurrency, formatDate } from "@/lib/format";
+import DrawFormDialog from "@/components/draws/DrawFormDialog";
+
+export default function DrawList() {
+  const [dialogOpen, setDialogOpen] = useState(false);
+
+  const { data: draws = [], isLoading } = useQuery({
+    queryKey: ["draws"],
+    queryFn: () => base44.entities.DrawCycle.list("-created_date"),
+  });
+  const { data: openItems = [] } = useQuery({
+    queryKey: ["openItems", "all"],
+    queryFn: () => base44.entities.OpenItem.list(),
+  });
+
+  const activeDraws = draws.filter((d) => d.status !== "closed").length;
+  const totalAmount = draws.reduce((sum, d) => sum + (d.amount || 0), 0);
+  const activeItems = openItems.filter((i) => i.status === "open" || i.status === "in_progress").length;
+  const openByDraw = openItems.reduce((acc, i) => {
+    if (i.status === "open" || i.status === "in_progress") {
+      acc[i.draw_cycle_id] = (acc[i.draw_cycle_id] || 0) + 1;
+    }
+    return acc;
+  }, {});
+
+  const stats = [
+    { label: "Total Draws", value: draws.length, icon: ClipboardList },
+    { label: "Active", value: activeDraws, icon: FolderOpen },
+    { label: "Total Value", value: formatCurrency(totalAmount), icon: DollarSign },
+    { label: "Open Items", value: activeItems, icon: FileWarning },
+  ];
+
+  return (
+    <div className="p-6 max-w-6xl mx-auto">
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">Draw Cycles</h1>
+          <p className="text-sm text-slate-500">Track document collection and open items for construction loan draws</p>
+        </div>
+        <Button onClick={() => setDialogOpen(true)}><Plus className="w-4 h-4 mr-1.5" />New Draw</Button>
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+        {stats.map((s) => (
+          <div key={s.label} className="bg-white border rounded-xl p-4">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs font-medium text-slate-500">{s.label}</span>
+              <s.icon className="w-4 h-4 text-slate-400" />
+            </div>
+            <div className="text-xl font-bold text-slate-900">{s.value}</div>
+          </div>
+        ))}
+      </div>
+
+      <div className="bg-white border rounded-xl overflow-hidden">
+        <table className="w-full">
+          <thead>
+            <tr className="border-b bg-slate-50 text-left">
+              <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Draw</th>
+              <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Project</th>
+              <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Status</th>
+              <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Date</th>
+              <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide text-right">Amount</th>
+              <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide text-center">Open Items</th>
+              <th className="px-4 py-3"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {isLoading ? (
+              <tr><td colSpan={7} className="px-4 py-8 text-center text-slate-400">Loading...</td></tr>
+            ) : draws.length === 0 ? (
+              <tr><td colSpan={7} className="px-4 py-12 text-center text-slate-400">No draw cycles yet. Click "New Draw" to get started.</td></tr>
+            ) : (
+              draws.map((draw) => (
+                <tr key={draw.id} className="border-b last:border-0 hover:bg-slate-50 transition-colors">
+                  <td className="px-4 py-3">
+                    <Link to={`/draws/${draw.id}`} className="font-medium text-slate-900 hover:text-blue-600">{draw.name}</Link>
+                  </td>
+                  <td className="px-4 py-3 text-sm text-slate-600">{draw.project_name}</td>
+                  <td className="px-4 py-3"><StatusBadge status={draw.status} /></td>
+                  <td className="px-4 py-3 text-sm text-slate-600">{formatDate(draw.draw_date)}</td>
+                  <td className="px-4 py-3 text-sm font-medium text-slate-900 text-right">{formatCurrency(draw.amount)}</td>
+                  <td className="px-4 py-3 text-center">
+                    {openByDraw[draw.id] ? (
+                      <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-amber-100 text-amber-700 text-xs font-semibold">{openByDraw[draw.id]}</span>
+                    ) : <span className="text-slate-300">—</span>}
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <Link to={`/draws/${draw.id}`} className="inline-flex items-center text-slate-400 hover:text-slate-700">
+                      <ChevronRight className="w-4 h-4" />
+                    </Link>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      <DrawFormDialog open={dialogOpen} onOpenChange={setDialogOpen} />
+    </div>
+  );
+}

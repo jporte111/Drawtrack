@@ -1,0 +1,45 @@
+{
+  "name": "Document",
+  "type": "object",
+  "properties": {
+    "draw_vendor_id": {
+      "type": "string"
+    },
+    "document_type": {
+      "type": "string",
+      "enum": [
+        "invoice",
+        "conditional_lien_release",
+        "unconditional_lien_release"
+      ]
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "not_requested",
+        "requested",
+        "received",
+        "approved",
+        "rejected"
+      ],
+      "default": "not_requested"
+    },
+    "file_url": {
+      "type": "string"
+    },
+    "amount": {
+      "type": "number"
+    },
+    "received_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "draw_vendor_id",
+    "document_type"
+  ]
+}

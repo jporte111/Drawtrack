@@ -1,0 +1,46 @@
+{
+  "name": "Voucher",
+  "type": "object",
+  "properties": {
+    "draw_cycle_id": {
+      "type": "string"
+    },
+    "draw_vendor_id": {
+      "type": "string"
+    },
+    "vendor_id": {
+      "type": "string"
+    },
+    "voucher_number": {
+      "type": "string"
+    },
+    "amount": {
+      "type": "number"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "pending",
+        "approved",
+        "paid",
+        "void"
+      ],
+      "default": "draft"
+    },
+    "issue_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "payment_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "draw_cycle_id"
+  ]
+}

@@ -1,0 +1,38 @@
+{
+  "name": "DrawCycle",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "project_name": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "in_progress",
+        "submitted",
+        "under_review",
+        "funded",
+        "closed"
+      ],
+      "default": "draft"
+    },
+    "draw_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "amount": {
+      "type": "number"
+    },
+    "description": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "name",
+    "project_name"
+  ]
+}

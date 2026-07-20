@@ -1,0 +1,36 @@
+{
+  "name": "DrawVendor",
+  "type": "object",
+  "properties": {
+    "draw_cycle_id": {
+      "type": "string"
+    },
+    "vendor_id": {
+      "type": "string"
+    },
+    "scope_of_work": {
+      "type": "string"
+    },
+    "amount": {
+      "type": "number"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "documents_requested",
+        "documents_received",
+        "under_review",
+        "complete"
+      ],
+      "default": "pending"
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "draw_cycle_id",
+    "vendor_id"
+  ]
+}

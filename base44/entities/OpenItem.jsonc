@@ -1,0 +1,53 @@
+{
+  "name": "OpenItem",
+  "type": "object",
+  "properties": {
+    "draw_cycle_id": {
+      "type": "string"
+    },
+    "draw_vendor_id": {
+      "type": "string"
+    },
+    "title": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "priority": {
+      "type": "string",
+      "enum": [
+        "low",
+        "medium",
+        "high",
+        "critical"
+      ],
+      "default": "medium"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "open",
+        "in_progress",
+        "resolved",
+        "closed"
+      ],
+      "default": "open"
+    },
+    "assigned_to": {
+      "type": "string"
+    },
+    "due_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "resolved_date": {
+      "type": "string",
+      "format": "date"
+    }
+  },
+  "required": [
+    "draw_cycle_id",
+    "title"
+  ]
+}
