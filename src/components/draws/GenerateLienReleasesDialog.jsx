@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -9,6 +9,11 @@ export default function GenerateLienReleasesDialog({ open, onOpenChange, vendorN
   const [generating, setGenerating] = useState(null);
   const [results, setResults] = useState({});
   const [error, setError] = useState(null);
+
+  useEffect(() => {
+    setResults({});
+    setError(null);
+  }, [vendorName, drawAmount]);
 
   const handleGenerate = async (formType) => {
     setGenerating(formType);
