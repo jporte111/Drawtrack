@@ -3,15 +3,18 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, FileText } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
 import AddVendorDialog from "./AddVendorDialog";
 import DocumentStatusCell from "./DocumentStatusCell";
+import GenerateLienReleasesDialog from "./GenerateLienReleasesDialog";
 
 const DV_STATUSES = ["pending", "documents_requested", "documents_received", "under_review", "complete"];
 
 export default function VendorChecklist({ drawId }) {
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [genDialogOpen, setGenDialogOpen] = useState(false);
+  const [genVendor, setGenVendor] = useState({ name: "", amount: null });
   const queryClient = useQueryClient();
 
   const { data: drawVendors = [] } = useQuery({
@@ -25,6 +28,10 @@ export default function VendorChecklist({ drawId }) {
   const { data: allDocs = [] } = useQuery({
     queryKey: ["documents"],
     queryFn: () => base44.entities.Document.list(),
+  });
+  const { data: drawCycle } = useQuery({
+    queryKey: ["drawCycle", drawId],
+    queryFn: () => base44.entities.DrawCycle.get(drawId),
   });
 
   const vendorMap = new Map(vendors.map((v) => [v.id, v]));
@@ -47,6 +54,11 @@ export default function VendorChecklist({ drawId }) {
     await base44.entities.DrawVendor.delete(dvId);
     queryClient.invalidateQueries({ queryKey: ["drawVendors", drawId] });
     queryClient.invalidateQueries({ queryKey: ["documents"] });
+  };
+
+  const openGenerateDialog = (vendorName, amount) => {
+    setGenVendor({ name: vendorName, amount });
+    setGenDialogOpen(true);
   };
 
   return (
@@ -96,9 +108,14 @@ export default function VendorChecklist({ drawId }) {
                       </Select>
                     </td>
                     <td className="px-2 py-2">
-                      <Button size="icon" variant="ghost" className="h-7 w-7 text-slate-400 hover:text-red-600" onClick={() => handleRemoveVendor(dv.id)}>
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </Button>
+                      <div className="flex items-center gap-1">
+                        <Button size="icon" variant="ghost" className="h-7 w-7 text-slate-400 hover:text-slate-700" onClick={() => openGenerateDialog(vendor?.name || "Unknown", dv.amount)} title="Generate lien release forms">
+                          <FileText className="w-3.5 h-3.5" />
+                        </Button>
+                        <Button size="icon" variant="ghost" className="h-7 w-7 text-slate-400 hover:text-red-600" onClick={() => handleRemoveVendor(dv.id)}>
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -108,6 +125,13 @@ export default function VendorChecklist({ drawId }) {
         </div>
       )}
       <AddVendorDialog open={dialogOpen} onOpenChange={setDialogOpen} drawId={drawId} />
+      <GenerateLienReleasesDialog
+        open={genDialogOpen}
+        onOpenChange={setGenDialogOpen}
+        vendorName={genVendor.name}
+        projectName={drawCycle?.project_name || ""}
+        drawAmount={genVendor.amount}
+      />
     </div>
   );
 }
