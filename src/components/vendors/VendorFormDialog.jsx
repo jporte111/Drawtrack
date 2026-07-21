@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -9,13 +9,18 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const VENDOR_TYPES = ["general_contractor", "subcontractor", "supplier", "consultant", "other"];
-const EMPTY = { name: "", vendor_type: "other", contact_name: "", email: "", phone: "", address: "", tax_id: "", status: "active", notes: "" };
+const EMPTY = { name: "", vendor_type: "other", contact_name: "", email: "", phone: "", address: "", tax_id: "", status: "active", notes: "", client_id: "" };
 
 export default function VendorFormDialog({ open, onOpenChange, vendor, clientId }) {
   const isEdit = !!vendor;
   const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState(EMPTY);
+  const { data: clients = [] } = useQuery({
+    queryKey: ["clients"],
+    queryFn: () => base44.entities.Client.list("-created_date"),
+    enabled: !clientId,
+  });
 
   useEffect(() => {
     if (vendor) {
@@ -32,7 +37,7 @@ export default function VendorFormDialog({ open, onOpenChange, vendor, clientId 
       if (isEdit) {
         await base44.entities.Vendor.update(vendor.id, form);
       } else {
-        await base44.entities.Vendor.create({ ...form, client_id: clientId });
+        await base44.entities.Vendor.create({ ...form, client_id: clientId || form.client_id });
       }
       queryClient.invalidateQueries({ queryKey: ["vendors"] });
       onOpenChange(false);
@@ -46,6 +51,17 @@ export default function VendorFormDialog({ open, onOpenChange, vendor, clientId 
       <DialogContent>
         <DialogHeader><DialogTitle>{isEdit ? "Edit Vendor" : "New Vendor"}</DialogTitle></DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
+          {!clientId && (
+            <div className="space-y-1.5">
+              <Label>Client</Label>
+              <Select value={form.client_id} onValueChange={(v) => setForm({ ...form, client_id: v })}>
+                <SelectTrigger><SelectValue placeholder="Select client" /></SelectTrigger>
+                <SelectContent>
+                  {clients.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <Label>Vendor Name</Label>

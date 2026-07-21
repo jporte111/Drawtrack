@@ -54,6 +54,18 @@ export default function Layout() {
           All Clients
         </Link>
 
+        <Link
+          to="/vendors"
+          onClick={() => setSidebarOpen(false)}
+          className={cn(
+            "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+            location.pathname === "/vendors" ? "bg-slate-800 text-white" : "text-slate-400 hover:text-white hover:bg-slate-800/50"
+          )}
+        >
+          <Users className="w-4 h-4" />
+          All Vendors
+        </Link>
+
         <div className="pt-3">
           <div className="px-3 py-1 text-xs font-semibold text-slate-500 uppercase tracking-wide">Clients</div>
           {clients.length === 0 ? (

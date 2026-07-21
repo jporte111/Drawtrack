@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import StatusBadge from "@/components/StatusBadge";
 import { formatCurrency, formatDate } from "@/lib/format";
 import DrawFormDialog from "@/components/draws/DrawFormDialog";
+import DrawActionsMenu from "@/components/draws/DrawActionsMenu";
 
 export default function DrawList() {
   const { clientId } = useParams();
@@ -104,9 +105,12 @@ export default function DrawList() {
                     ) : <span className="text-slate-300">—</span>}
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <Link to={`/draws/${draw.id}`} className="inline-flex items-center text-slate-400 hover:text-slate-700">
-                      <ChevronRight className="w-4 h-4" />
-                    </Link>
+                    <div className="flex items-center justify-end gap-1">
+                      <Link to={`/draws/${draw.id}`} className="inline-flex items-center text-slate-400 hover:text-slate-700">
+                        <ChevronRight className="w-4 h-4" />
+                      </Link>
+                      <DrawActionsMenu draw={draw} clientId={clientId} />
+                    </div>
                   </td>
                 </tr>
               ))
@@ -123,10 +127,13 @@ export default function DrawList() {
           <div className="text-center py-12 text-slate-400 border border-dashed rounded-xl">No draw cycles yet. Click "New Draw" to get started.</div>
         ) : (
           draws.map((draw) => (
-            <Link key={draw.id} to={`/draws/${draw.id}`} className="block bg-white border rounded-xl p-4 hover:bg-slate-50 transition-colors">
+            <div key={draw.id} className="bg-white border rounded-xl p-4">
               <div className="flex items-start justify-between gap-2 mb-2">
-                <div className="font-medium text-slate-900">{draw.name}</div>
-                <StatusBadge status={draw.status} />
+                <Link to={`/draws/${draw.id}`} className="font-medium text-slate-900 hover:text-blue-600">{draw.name}</Link>
+                <div className="flex items-center gap-1">
+                  <StatusBadge status={draw.status} />
+                  <DrawActionsMenu draw={draw} clientId={clientId} />
+                </div>
               </div>
               <div className="text-sm text-slate-600 mb-2">{draw.project_name}</div>
               <div className="flex items-center justify-between text-sm">
@@ -138,7 +145,7 @@ export default function DrawList() {
                   <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-amber-100 text-amber-700 text-xs font-semibold">{openByDraw[draw.id]} open items</span>
                 </div>
               )}
-            </Link>
+            </div>
           ))
         )}
       </div>

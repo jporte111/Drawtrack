@@ -16,6 +16,7 @@ import ClientList from '@/pages/ClientList';
 import DrawList from '@/pages/DrawList';
 import DrawDetail from '@/pages/DrawDetail';
 import VendorList from '@/pages/VendorList';
+import MasterVendorList from '@/pages/MasterVendorList';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -47,6 +48,7 @@ const AuthenticatedApp = () => {
         <Route path="/" element={<ClientList />} />
         <Route path="/clients/:clientId/draws" element={<DrawList />} />
         <Route path="/clients/:clientId/vendors" element={<VendorList />} />
+        <Route path="/vendors" element={<MasterVendorList />} />
         <Route path="/draws/:id" element={<DrawDetail />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
