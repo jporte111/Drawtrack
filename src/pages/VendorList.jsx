@@ -2,11 +2,12 @@ import React, { useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
-import { Plus, Pencil, ChevronLeft } from "lucide-react";
+import { Plus, ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import StatusBadge from "@/components/StatusBadge";
 import { vendorTypeConfig } from "@/lib/statusConfig";
 import VendorFormDialog from "@/components/vendors/VendorFormDialog";
+import VendorActionsMenu from "@/components/vendors/VendorActionsMenu";
 
 export default function VendorList() {
   const { clientId } = useParams();
@@ -75,9 +76,7 @@ export default function VendorList() {
                   <td className="px-4 py-3 text-sm text-slate-600">{vendor.phone || "—"}</td>
                   <td className="px-4 py-3"><StatusBadge status={vendor.status} /></td>
                   <td className="px-4 py-3 text-right">
-                    <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handleEdit(vendor)}>
-                      <Pencil className="w-3.5 h-3.5" />
-                    </Button>
+                    <VendorActionsMenu vendor={vendor} onEdit={() => handleEdit(vendor)} />
                   </td>
                 </tr>
               ))
@@ -97,9 +96,7 @@ export default function VendorList() {
             <div key={vendor.id} className="bg-white border rounded-xl p-4">
               <div className="flex items-start justify-between gap-2 mb-2">
                 <div className="font-medium text-slate-900">{vendor.name}</div>
-                <Button size="icon" variant="ghost" className="h-7 w-7 shrink-0" onClick={() => handleEdit(vendor)}>
-                  <Pencil className="w-3.5 h-3.5" />
-                </Button>
+                <VendorActionsMenu vendor={vendor} onEdit={() => handleEdit(vendor)} />
               </div>
               <div className="text-sm text-slate-600 mb-1">{vendorTypeConfig[vendor.vendor_type] || vendor.vendor_type}</div>
               {vendor.contact_name && <div className="text-sm text-slate-600">{vendor.contact_name}</div>}
