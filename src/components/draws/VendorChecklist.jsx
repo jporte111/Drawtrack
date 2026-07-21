@@ -3,7 +3,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Trash2, FileText } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Plus, Trash2, FileText, StickyNote } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
 import AddVendorDialog from "./AddVendorDialog";
 import DocumentStatusCell from "./DocumentStatusCell";
@@ -97,7 +98,19 @@ export default function VendorChecklist({ drawId }) {
                     <tr key={dv.id} className="border-b last:border-0 hover:bg-slate-50">
                       <td className="px-2 py-2.5 font-medium text-slate-900">
                         {vendor?.name || "Unknown"}
-                        {dv.notes && <div className="text-xs font-normal text-slate-400 mt-0.5 max-w-[160px] truncate">{dv.notes}</div>}
+                        {dv.notes && (
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <button type="button" className="text-xs font-normal text-slate-400 hover:text-slate-700 mt-0.5 max-w-[160px] truncate text-left flex items-center gap-1 cursor-pointer">
+                                <StickyNote className="w-3 h-3 shrink-0" />
+                                <span className="truncate">{dv.notes}</span>
+                              </button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-80 text-sm" side="top">
+                              <p className="text-slate-700 whitespace-pre-wrap">{dv.notes}</p>
+                            </PopoverContent>
+                          </Popover>
+                        )}
                       </td>
                       <td className="px-2 py-2.5 text-slate-600 max-w-[140px] truncate">{dv.scope_of_work || "—"}</td>
                       <td className="px-2 py-2.5 text-right font-medium">{formatCurrency(dv.amount)}</td>
@@ -140,7 +153,19 @@ export default function VendorChecklist({ drawId }) {
                     <div className="min-w-0">
                       <div className="font-medium text-slate-900 truncate">{vendor?.name || "Unknown"}</div>
                       <div className="text-xs text-slate-500 truncate">{dv.scope_of_work || "—"}</div>
-                      {dv.notes && <div className="text-xs text-slate-400 italic truncate mt-0.5">{dv.notes}</div>}
+                      {dv.notes && (
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <button type="button" className="text-xs text-slate-400 hover:text-slate-700 italic truncate mt-0.5 flex items-center gap-1 text-left w-full">
+                              <StickyNote className="w-3 h-3 shrink-0" />
+                              <span className="truncate">{dv.notes}</span>
+                            </button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-72 text-sm">
+                            <p className="text-slate-700 whitespace-pre-wrap">{dv.notes}</p>
+                          </PopoverContent>
+                        </Popover>
+                      )}
                     </div>
                     <div className="font-medium text-sm shrink-0">{formatCurrency(dv.amount)}</div>
                   </div>
