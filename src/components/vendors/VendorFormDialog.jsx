@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 const VENDOR_TYPES = ["general_contractor", "subcontractor", "supplier", "consultant", "other"];
 const EMPTY = { name: "", vendor_type: "other", contact_name: "", email: "", phone: "", address: "", tax_id: "", status: "active", notes: "" };
 
-export default function VendorFormDialog({ open, onOpenChange, vendor }) {
+export default function VendorFormDialog({ open, onOpenChange, vendor, clientId }) {
   const isEdit = !!vendor;
   const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
@@ -32,7 +32,7 @@ export default function VendorFormDialog({ open, onOpenChange, vendor }) {
       if (isEdit) {
         await base44.entities.Vendor.update(vendor.id, form);
       } else {
-        await base44.entities.Vendor.create(form);
+        await base44.entities.Vendor.create({ ...form, client_id: clientId });
       }
       queryClient.invalidateQueries({ queryKey: ["vendors"] });
       onOpenChange(false);

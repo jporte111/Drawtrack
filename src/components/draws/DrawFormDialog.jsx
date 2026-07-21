@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 const DRAW_STATUSES = ["draft", "in_progress", "submitted", "under_review", "funded", "closed"];
 
-export default function DrawFormDialog({ open, onOpenChange, draw }) {
+export default function DrawFormDialog({ open, onOpenChange, draw, clientId }) {
   const isEdit = !!draw;
   const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
@@ -40,7 +40,7 @@ export default function DrawFormDialog({ open, onOpenChange, draw }) {
         await base44.entities.DrawCycle.update(draw.id, payload);
         queryClient.invalidateQueries({ queryKey: ["draw", draw.id] });
       } else {
-        await base44.entities.DrawCycle.create(payload);
+        await base44.entities.DrawCycle.create({ ...payload, client_id: clientId });
       }
       queryClient.invalidateQueries({ queryKey: ["draws"] });
       onOpenChange(false);

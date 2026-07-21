@@ -1,19 +1,26 @@
 import React, { useState } from "react";
+import { useParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
-import { Plus, Pencil } from "lucide-react";
+import { Plus, Pencil, ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import StatusBadge from "@/components/StatusBadge";
 import { vendorTypeConfig } from "@/lib/statusConfig";
 import VendorFormDialog from "@/components/vendors/VendorFormDialog";
 
 export default function VendorList() {
+  const { clientId } = useParams();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingVendor, setEditingVendor] = useState(null);
 
+  const { data: client } = useQuery({
+    queryKey: ["client", clientId],
+    queryFn: () => base44.entities.Client.get(clientId),
+    enabled: !!clientId,
+  });
   const { data: vendors = [], isLoading } = useQuery({
-    queryKey: ["vendors"],
-    queryFn: () => base44.entities.Vendor.list("-created_date"),
+    queryKey: ["vendors", clientId],
+    queryFn: () => base44.entities.Vendor.filter({ client_id: clientId }),
   });
 
   const handleEdit = (vendor) => {
@@ -28,10 +35,13 @@ export default function VendorList() {
 
   return (
     <div className="p-4 md:p-6 max-w-6xl mx-auto">
+      <Link to="/" className="inline-flex items-center text-sm text-slate-500 hover:text-slate-900 mb-3">
+        <ChevronLeft className="w-4 h-4" />All Clients
+      </Link>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Vendor Master List</h1>
-          <p className="text-sm text-slate-500">All vendors available for draw assignments</p>
+          <h1 className="text-2xl font-bold text-slate-900">{client?.name ? `${client.name} — Vendors` : "Vendors"}</h1>
+          <p className="text-sm text-slate-500">All vendors for {client?.name || "this client"}</p>
         </div>
         <Button onClick={() => setDialogOpen(true)} className="shrink-0"><Plus className="w-4 h-4 mr-1.5" />New Vendor</Button>
       </div>
@@ -101,7 +111,7 @@ export default function VendorList() {
         )}
       </div>
 
-      <VendorFormDialog open={dialogOpen} onOpenChange={handleOpenChange} vendor={editingVendor} />
+      <VendorFormDialog open={dialogOpen} onOpenChange={handleOpenChange} vendor={editingVendor} clientId={clientId} />
     </div>
   );
 }

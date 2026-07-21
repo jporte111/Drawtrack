@@ -12,6 +12,7 @@ import Register from '@/pages/Register';
 import ForgotPassword from '@/pages/ForgotPassword';
 import ResetPassword from '@/pages/ResetPassword';
 import Layout from '@/components/Layout';
+import ClientList from '@/pages/ClientList';
 import DrawList from '@/pages/DrawList';
 import DrawDetail from '@/pages/DrawDetail';
 import VendorList from '@/pages/VendorList';
@@ -43,9 +44,10 @@ const AuthenticatedApp = () => {
   return (
     <Routes>
       <Route element={<Layout />}>
-        <Route path="/" element={<DrawList />} />
+        <Route path="/" element={<ClientList />} />
+        <Route path="/clients/:clientId/draws" element={<DrawList />} />
+        <Route path="/clients/:clientId/vendors" element={<VendorList />} />
         <Route path="/draws/:id" element={<DrawDetail />} />
-        <Route path="/vendors" element={<VendorList />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>

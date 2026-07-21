@@ -29,7 +29,7 @@ export default function DrawDetail() {
 
   return (
     <div className="p-4 md:p-6 max-w-6xl mx-auto">
-      <Link to="/" className="inline-flex items-center text-sm text-slate-500 hover:text-slate-900 mb-3">
+      <Link to={draw.client_id ? `/clients/${draw.client_id}/draws` : "/"} className="inline-flex items-center text-sm text-slate-500 hover:text-slate-900 mb-3">
         <ChevronLeft className="w-4 h-4" />Draws
       </Link>
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 mb-6">

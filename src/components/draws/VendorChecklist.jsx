@@ -180,7 +180,7 @@ export default function VendorChecklist({ drawId }) {
           </div>
         </>
       )}
-      <AddVendorDialog open={dialogOpen} onOpenChange={setDialogOpen} drawId={drawId} />
+      <AddVendorDialog open={dialogOpen} onOpenChange={setDialogOpen} drawId={drawId} clientId={drawCycle?.client_id} />
       <GenerateLienReleasesDialog
         open={genDialogOpen}
         onOpenChange={setGenDialogOpen}

@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import InvoiceUpload from "./InvoiceUpload";
 
-export default function AddVendorDialog({ open, onOpenChange, drawId }) {
+export default function AddVendorDialog({ open, onOpenChange, drawId, clientId }) {
   const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({ vendor_id: "", scope_of_work: "", amount: "", notes: "" });
@@ -26,7 +26,7 @@ export default function AddVendorDialog({ open, onOpenChange, drawId }) {
   });
 
   const linkedIds = new Set(drawVendors.map((dv) => dv.vendor_id));
-  const availableVendors = vendors.filter((v) => !linkedIds.has(v.id));
+  const availableVendors = vendors.filter((v) => !linkedIds.has(v.id) && v.client_id === clientId);
 
   useEffect(() => {
     if (open) {
@@ -62,6 +62,7 @@ export default function AddVendorDialog({ open, onOpenChange, drawId }) {
           tax_id: data.tax_id || "",
           vendor_type: "other",
           status: "active",
+          client_id: clientId,
         });
         queryClient.setQueryData(["vendors"], (old = []) => [...old, newVendor]);
         setForm((f) => ({ ...f, vendor_id: newVendor.id }));

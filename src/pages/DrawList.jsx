@@ -1,19 +1,25 @@
 import React, { useState } from "react";
+import { useParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
-import { Plus, ChevronRight, FileWarning, DollarSign, FolderOpen, ClipboardList } from "lucide-react";
+import { Plus, ChevronRight, ChevronLeft, FileWarning, DollarSign, FolderOpen, ClipboardList } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import StatusBadge from "@/components/StatusBadge";
 import { formatCurrency, formatDate } from "@/lib/format";
 import DrawFormDialog from "@/components/draws/DrawFormDialog";
 
 export default function DrawList() {
+  const { clientId } = useParams();
   const [dialogOpen, setDialogOpen] = useState(false);
 
+  const { data: client } = useQuery({
+    queryKey: ["client", clientId],
+    queryFn: () => base44.entities.Client.get(clientId),
+    enabled: !!clientId,
+  });
   const { data: draws = [], isLoading } = useQuery({
-    queryKey: ["draws"],
-    queryFn: () => base44.entities.DrawCycle.list("-created_date"),
+    queryKey: ["draws", clientId],
+    queryFn: () => base44.entities.DrawCycle.filter({ client_id: clientId }),
   });
   const { data: openItems = [] } = useQuery({
     queryKey: ["openItems", "all"],
@@ -22,9 +28,10 @@ export default function DrawList() {
 
   const activeDraws = draws.filter((d) => d.status !== "closed").length;
   const totalAmount = draws.reduce((sum, d) => sum + (d.amount || 0), 0);
-  const activeItems = openItems.filter((i) => i.status === "open" || i.status === "in_progress").length;
+  const drawIds = new Set(draws.map((d) => d.id));
+  const activeItems = openItems.filter((i) => drawIds.has(i.draw_cycle_id) && (i.status === "open" || i.status === "in_progress")).length;
   const openByDraw = openItems.reduce((acc, i) => {
-    if (i.status === "open" || i.status === "in_progress") {
+    if (drawIds.has(i.draw_cycle_id) && (i.status === "open" || i.status === "in_progress")) {
       acc[i.draw_cycle_id] = (acc[i.draw_cycle_id] || 0) + 1;
     }
     return acc;
@@ -39,10 +46,13 @@ export default function DrawList() {
 
   return (
     <div className="p-4 md:p-6 max-w-6xl mx-auto">
+      <Link to="/" className="inline-flex items-center text-sm text-slate-500 hover:text-slate-900 mb-3">
+        <ChevronLeft className="w-4 h-4" />All Clients
+      </Link>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Draw Cycles</h1>
-          <p className="text-sm text-slate-500">Track document collection and open items for construction loan draws</p>
+          <h1 className="text-2xl font-bold text-slate-900">{client?.name || "Draws"}</h1>
+          <p className="text-sm text-slate-500">Draw cycles for {client?.name || "this client"}</p>
         </div>
         <Button onClick={() => setDialogOpen(true)} className="shrink-0"><Plus className="w-4 h-4 mr-1.5" />New Draw</Button>
       </div>
@@ -133,7 +143,7 @@ export default function DrawList() {
         )}
       </div>
 
-      <DrawFormDialog open={dialogOpen} onOpenChange={setDialogOpen} />
+      <DrawFormDialog open={dialogOpen} onOpenChange={setDialogOpen} clientId={clientId} />
     </div>
   );
 }
