@@ -27,16 +27,17 @@ export default function VendorList() {
   };
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
+    <div className="p-4 md:p-6 max-w-6xl mx-auto">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Vendor Master List</h1>
           <p className="text-sm text-slate-500">All vendors available for draw assignments</p>
         </div>
-        <Button onClick={() => setDialogOpen(true)}><Plus className="w-4 h-4 mr-1.5" />New Vendor</Button>
+        <Button onClick={() => setDialogOpen(true)} className="shrink-0"><Plus className="w-4 h-4 mr-1.5" />New Vendor</Button>
       </div>
 
-      <div className="bg-white border rounded-xl overflow-hidden">
+      {/* Desktop table */}
+      <div className="bg-white border rounded-xl overflow-hidden hidden md:block">
         <table className="w-full">
           <thead>
             <tr className="border-b bg-slate-50 text-left">
@@ -73,6 +74,31 @@ export default function VendorList() {
             )}
           </tbody>
         </table>
+      </div>
+
+      {/* Mobile cards */}
+      <div className="space-y-3 md:hidden">
+        {isLoading ? (
+          <div className="text-center py-8 text-slate-400">Loading...</div>
+        ) : vendors.length === 0 ? (
+          <div className="text-center py-12 text-slate-400 border border-dashed rounded-xl">No vendors yet. Click "New Vendor" to get started.</div>
+        ) : (
+          vendors.map((vendor) => (
+            <div key={vendor.id} className="bg-white border rounded-xl p-4">
+              <div className="flex items-start justify-between gap-2 mb-2">
+                <div className="font-medium text-slate-900">{vendor.name}</div>
+                <Button size="icon" variant="ghost" className="h-7 w-7 shrink-0" onClick={() => handleEdit(vendor)}>
+                  <Pencil className="w-3.5 h-3.5" />
+                </Button>
+              </div>
+              <div className="text-sm text-slate-600 mb-1">{vendorTypeConfig[vendor.vendor_type] || vendor.vendor_type}</div>
+              {vendor.contact_name && <div className="text-sm text-slate-600">{vendor.contact_name}</div>}
+              {vendor.email && <div className="text-sm text-slate-600 truncate">{vendor.email}</div>}
+              {vendor.phone && <div className="text-sm text-slate-600">{vendor.phone}</div>}
+              <div className="mt-2"><StatusBadge status={vendor.status} /></div>
+            </div>
+          ))
+        )}
       </div>
 
       <VendorFormDialog open={dialogOpen} onOpenChange={handleOpenChange} vendor={editingVendor} />

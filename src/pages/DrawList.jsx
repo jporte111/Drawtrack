@@ -38,13 +38,13 @@ export default function DrawList() {
   ];
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
+    <div className="p-4 md:p-6 max-w-6xl mx-auto">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Draw Cycles</h1>
           <p className="text-sm text-slate-500">Track document collection and open items for construction loan draws</p>
         </div>
-        <Button onClick={() => setDialogOpen(true)}><Plus className="w-4 h-4 mr-1.5" />New Draw</Button>
+        <Button onClick={() => setDialogOpen(true)} className="shrink-0"><Plus className="w-4 h-4 mr-1.5" />New Draw</Button>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
@@ -59,7 +59,8 @@ export default function DrawList() {
         ))}
       </div>
 
-      <div className="bg-white border rounded-xl overflow-hidden">
+      {/* Desktop table */}
+      <div className="bg-white border rounded-xl overflow-hidden hidden md:block">
         <table className="w-full">
           <thead>
             <tr className="border-b bg-slate-50 text-left">
@@ -102,6 +103,34 @@ export default function DrawList() {
             )}
           </tbody>
         </table>
+      </div>
+
+      {/* Mobile cards */}
+      <div className="space-y-3 md:hidden">
+        {isLoading ? (
+          <div className="text-center py-8 text-slate-400">Loading...</div>
+        ) : draws.length === 0 ? (
+          <div className="text-center py-12 text-slate-400 border border-dashed rounded-xl">No draw cycles yet. Click "New Draw" to get started.</div>
+        ) : (
+          draws.map((draw) => (
+            <Link key={draw.id} to={`/draws/${draw.id}`} className="block bg-white border rounded-xl p-4 hover:bg-slate-50 transition-colors">
+              <div className="flex items-start justify-between gap-2 mb-2">
+                <div className="font-medium text-slate-900">{draw.name}</div>
+                <StatusBadge status={draw.status} />
+              </div>
+              <div className="text-sm text-slate-600 mb-2">{draw.project_name}</div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-slate-500">{formatDate(draw.draw_date)}</span>
+                <span className="font-medium text-slate-900">{formatCurrency(draw.amount)}</span>
+              </div>
+              {openByDraw[draw.id] > 0 && (
+                <div className="mt-2">
+                  <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-amber-100 text-amber-700 text-xs font-semibold">{openByDraw[draw.id]} open items</span>
+                </div>
+              )}
+            </Link>
+          ))
+        )}
       </div>
 
       <DrawFormDialog open={dialogOpen} onOpenChange={setDialogOpen} />

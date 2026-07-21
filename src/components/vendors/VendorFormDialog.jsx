@@ -46,7 +46,7 @@ export default function VendorFormDialog({ open, onOpenChange, vendor }) {
       <DialogContent>
         <DialogHeader><DialogTitle>{isEdit ? "Edit Vendor" : "New Vendor"}</DialogTitle></DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <Label>Vendor Name</Label>
               <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
@@ -61,7 +61,7 @@ export default function VendorFormDialog({ open, onOpenChange, vendor }) {
               </Select>
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <Label>Contact Name</Label>
               <Input value={form.contact_name} onChange={(e) => setForm({ ...form, contact_name: e.target.value })} />
@@ -77,7 +77,7 @@ export default function VendorFormDialog({ open, onOpenChange, vendor }) {
               </Select>
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <Label>Email</Label>
               <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
@@ -87,7 +87,7 @@ export default function VendorFormDialog({ open, onOpenChange, vendor }) {
               <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <Label>Tax ID</Label>
               <Input value={form.tax_id} onChange={(e) => setForm({ ...form, tax_id: e.target.value })} />

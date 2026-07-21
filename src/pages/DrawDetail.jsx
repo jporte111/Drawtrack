@@ -28,34 +28,34 @@ export default function DrawDetail() {
   }
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
+    <div className="p-4 md:p-6 max-w-6xl mx-auto">
       <Link to="/" className="inline-flex items-center text-sm text-slate-500 hover:text-slate-900 mb-3">
         <ChevronLeft className="w-4 h-4" />Draws
       </Link>
-      <div className="flex items-start justify-between mb-6">
-        <div>
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 mb-6">
+        <div className="min-w-0">
           <div className="flex items-center gap-3 mb-1">
             <h1 className="text-2xl font-bold text-slate-900">{draw.name}</h1>
             <StatusBadge status={draw.status} />
           </div>
           <p className="text-slate-500">{draw.project_name}</p>
-          <div className="flex items-center gap-4 mt-2 text-sm text-slate-500">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-sm text-slate-500">
             {draw.draw_date && <span>Date: {formatDate(draw.draw_date)}</span>}
             <span>Amount: {formatCurrency(draw.amount)}</span>
           </div>
         </div>
-        <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
+        <Button variant="outline" size="sm" onClick={() => setEditOpen(true)} className="shrink-0">
           <Pencil className="w-3.5 h-3.5 mr-1.5" />Edit
         </Button>
       </div>
 
-      <div className="bg-white border rounded-xl p-5 mb-4">
+      <div className="bg-white border rounded-xl p-4 md:p-5 mb-4">
         <OpenItemsSection drawId={id} />
       </div>
-      <div className="bg-white border rounded-xl p-5 mb-4">
+      <div className="bg-white border rounded-xl p-4 md:p-5 mb-4">
         <VendorChecklist drawId={id} />
       </div>
-      <div className="bg-white border rounded-xl p-5">
+      <div className="bg-white border rounded-xl p-4 md:p-5">
         <VoucherSection drawId={id} />
       </div>
 
