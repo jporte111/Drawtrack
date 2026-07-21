@@ -2,9 +2,10 @@ import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
-import { Plus, ClipboardList, Users, Pencil, Building2 } from "lucide-react";
+import { Plus, ClipboardList, Users, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ClientFormDialog from "@/components/clients/ClientFormDialog";
+import ClientActionsMenu from "@/components/clients/ClientActionsMenu";
 
 export default function ClientList() {
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -73,9 +74,7 @@ export default function ClientList() {
                     {client.project_name && <div className="text-sm text-slate-500 truncate">{client.project_name}</div>}
                   </div>
                 </div>
-                <Button size="icon" variant="ghost" className="h-7 w-7 shrink-0" onClick={() => handleEdit(client)}>
-                  <Pencil className="w-3.5 h-3.5" />
-                </Button>
+                <ClientActionsMenu client={client} onEdit={handleEdit} />
               </div>
               <div className="grid grid-cols-2 gap-3 mb-4">
                 <div className="text-center bg-slate-50 rounded-lg py-2">
