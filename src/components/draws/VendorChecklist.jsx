@@ -95,7 +95,10 @@ export default function VendorChecklist({ drawId }) {
                   const docs = docsByDV[dv.id] || {};
                   return (
                     <tr key={dv.id} className="border-b last:border-0 hover:bg-slate-50">
-                      <td className="px-2 py-2.5 font-medium text-slate-900">{vendor?.name || "Unknown"}</td>
+                      <td className="px-2 py-2.5 font-medium text-slate-900">
+                        {vendor?.name || "Unknown"}
+                        {dv.notes && <div className="text-xs font-normal text-slate-400 mt-0.5 max-w-[160px] truncate">{dv.notes}</div>}
+                      </td>
                       <td className="px-2 py-2.5 text-slate-600 max-w-[140px] truncate">{dv.scope_of_work || "—"}</td>
                       <td className="px-2 py-2.5 text-right font-medium">{formatCurrency(dv.amount)}</td>
                       <td className="px-2 py-2"><DocumentStatusCell doc={docs.invoice} drawId={drawId} /></td>
@@ -137,6 +140,7 @@ export default function VendorChecklist({ drawId }) {
                     <div className="min-w-0">
                       <div className="font-medium text-slate-900 truncate">{vendor?.name || "Unknown"}</div>
                       <div className="text-xs text-slate-500 truncate">{dv.scope_of_work || "—"}</div>
+                      {dv.notes && <div className="text-xs text-slate-400 italic truncate mt-0.5">{dv.notes}</div>}
                     </div>
                     <div className="font-medium text-sm shrink-0">{formatCurrency(dv.amount)}</div>
                   </div>
