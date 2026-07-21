@@ -7,11 +7,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import InvoiceUpload from "./InvoiceUpload";
 
 export default function AddVendorDialog({ open, onOpenChange, drawId }) {
   const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({ vendor_id: "", scope_of_work: "", amount: "", notes: "" });
+  const [invoiceFileUrl, setInvoiceFileUrl] = useState("");
+  const [extracted, setExtracted] = useState(false);
 
   const { data: vendors = [] } = useQuery({
     queryKey: ["vendors"],
@@ -26,8 +29,45 @@ export default function AddVendorDialog({ open, onOpenChange, drawId }) {
   const availableVendors = vendors.filter((v) => !linkedIds.has(v.id));
 
   useEffect(() => {
-    if (open) setForm({ vendor_id: "", scope_of_work: "", amount: "", notes: "" });
+    if (open) {
+      setForm({ vendor_id: "", scope_of_work: "", amount: "", notes: "" });
+      setInvoiceFileUrl("");
+      setExtracted(false);
+    }
   }, [open]);
+
+  const handleExtracted = async (data) => {
+    setForm((f) => ({
+      ...f,
+      scope_of_work: data.scope_of_work || f.scope_of_work,
+      amount: data.amount != null ? String(data.amount) : f.amount,
+    }));
+    setInvoiceFileUrl(data.invoice_file_url || "");
+    setExtracted(true);
+
+    if (data.vendor_name) {
+      const lower = data.vendor_name.toLowerCase();
+      const existing = vendors.find(
+        (v) => v.name.toLowerCase().includes(lower) || lower.includes(v.name.toLowerCase())
+      );
+      if (existing) {
+        setForm((f) => ({ ...f, vendor_id: existing.id }));
+      } else {
+        const newVendor = await base44.entities.Vendor.create({
+          name: data.vendor_name,
+          contact_name: data.contact_name || "",
+          email: data.email || "",
+          phone: data.phone || "",
+          address: data.address || "",
+          tax_id: data.tax_id || "",
+          vendor_type: "other",
+          status: "active",
+        });
+        queryClient.setQueryData(["vendors"], (old = []) => [...old, newVendor]);
+        setForm((f) => ({ ...f, vendor_id: newVendor.id }));
+      }
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -41,8 +81,11 @@ export default function AddVendorDialog({ open, onOpenChange, drawId }) {
         notes: form.notes,
         status: "pending",
       });
+      const invoiceDoc = invoiceFileUrl
+        ? { draw_vendor_id: dv.id, document_type: "invoice", status: "complete", file_url: invoiceFileUrl, amount: form.amount ? Number(form.amount) : null, received_date: new Date().toISOString().split("T")[0] }
+        : { draw_vendor_id: dv.id, document_type: "invoice", status: "missing" };
       await base44.entities.Document.bulkCreate([
-        { draw_vendor_id: dv.id, document_type: "invoice", status: "missing" },
+        invoiceDoc,
         { draw_vendor_id: dv.id, document_type: "conditional_lien_release", status: "missing" },
         { draw_vendor_id: dv.id, document_type: "unconditional_lien_release", status: "missing" },
       ]);
@@ -59,6 +102,12 @@ export default function AddVendorDialog({ open, onOpenChange, drawId }) {
       <DialogContent>
         <DialogHeader><DialogTitle>Add Vendor to Draw</DialogTitle></DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
+          <InvoiceUpload onExtracted={handleExtracted} />
+          {extracted && (
+            <p className="text-xs text-blue-600 bg-blue-50 rounded-md px-3 py-2">
+              Fields below were auto-filled from the invoice — please review.
+            </p>
+          )}
           <div className="space-y-1.5">
             <Label>Vendor</Label>
             <Select value={form.vendor_id} onValueChange={(v) => setForm({ ...form, vendor_id: v })}>
