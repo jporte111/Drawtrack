@@ -8,26 +8,26 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-const DRAW_STATUSES = ["draft", "in_progress", "submitted", "under_review", "funded", "closed"];
+const DRAW_STATUSES = ["in_progress", "submitted", "under_review", "funded", "closed"];
 
 export default function DrawFormDialog({ open, onOpenChange, draw, clientId }) {
   const isEdit = !!draw;
   const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({ name: "", project_name: "", status: "draft", draw_date: "", amount: "", description: "" });
+  const [form, setForm] = useState({ name: "", project_name: "", status: "in_progress", draw_date: "", amount: "", description: "" });
 
   useEffect(() => {
     if (draw) {
       setForm({
         name: draw.name || "",
         project_name: draw.project_name || "",
-        status: draw.status || "draft",
+        status: draw.status && draw.status !== "draft" ? draw.status : "in_progress",
         draw_date: draw.draw_date ? draw.draw_date.split("T")[0] : "",
         amount: draw.amount ?? "",
         description: draw.description || "",
       });
     } else {
-      setForm({ name: "", project_name: "", status: "draft", draw_date: "", amount: "", description: "" });
+      setForm({ name: "", project_name: "", status: "in_progress", draw_date: "", amount: "", description: "" });
     }
   }, [draw, open]);
 
