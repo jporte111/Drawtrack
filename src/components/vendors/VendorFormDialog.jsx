@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
@@ -11,11 +11,74 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 const VENDOR_TYPES = ["general_contractor", "subcontractor", "supplier", "consultant", "other"];
 const EMPTY = { name: "", vendor_type: "other", contact_name: "", email: "", phone: "", address: "", tax_id: "", status: "active", notes: "", client_id: "" };
 
+function VendorNameCombobox({ value, onChange, onSelectVendor }) {
+  const [search, setSearch] = useState(value || "");
+  const [open, setOpen] = useState(false);
+  const inputRef = useRef(null);
+
+  const { data: allVendors = [] } = useQuery({
+    queryKey: ["vendors", "all"],
+    queryFn: () => base44.entities.Vendor.list("-name"),
+  });
+
+  // Dedupe vendor names
+  const uniqueNames = [...new Set(allVendors.map(v => v.name))].sort();
+  const filtered = search.length > 0
+    ? uniqueNames.filter(n => n.toLowerCase().includes(search.toLowerCase()))
+    : uniqueNames;
+
+  useEffect(() => { setSearch(value || ""); }, [value]);
+
+  const handleSelect = (name) => {
+    const match = allVendors.find(v => v.name === name);
+    setSearch(name);
+    onChange(name);
+    if (match) onSelectVendor(match);
+    setOpen(false);
+  };
+
+  const handleInputChange = (e) => {
+    setSearch(e.target.value);
+    onChange(e.target.value);
+    setOpen(true);
+  };
+
+  return (
+    <div className="relative">
+      <Input
+        ref={inputRef}
+        value={search}
+        onChange={handleInputChange}
+        onFocus={() => setOpen(true)}
+        onBlur={() => setTimeout(() => setOpen(false), 150)}
+        placeholder="Type or select a vendor..."
+        required
+        autoComplete="off"
+      />
+      {open && filtered.length > 0 && (
+        <div className="absolute z-50 w-full mt-1 bg-popover border rounded-md shadow-lg max-h-52 overflow-y-auto">
+          {filtered.map(name => (
+            <button
+              key={name}
+              type="button"
+              className="w-full text-left px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground"
+              onMouseDown={() => handleSelect(name)}
+            >
+              {name}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function VendorFormDialog({ open, onOpenChange, vendor, clientId }) {
   const isEdit = !!vendor;
   const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState(EMPTY);
+
   const { data: clients = [] } = useQuery({
     queryKey: ["clients"],
     queryFn: () => base44.entities.Client.list("-created_date"),
@@ -23,12 +86,23 @@ export default function VendorFormDialog({ open, onOpenChange, vendor, clientId 
   });
 
   useEffect(() => {
-    if (vendor) {
-      setForm({ ...EMPTY, ...vendor });
-    } else {
-      setForm(EMPTY);
-    }
+    setForm(vendor ? { ...EMPTY, ...vendor } : EMPTY);
   }, [vendor, open]);
+
+  const handleSelectVendor = (v) => {
+    // Auto-fill fields from the selected master vendor
+    setForm(prev => ({
+      ...prev,
+      name: v.name,
+      vendor_type: v.vendor_type || prev.vendor_type,
+      contact_name: v.contact_name || prev.contact_name,
+      email: v.email || prev.email,
+      phone: v.phone || prev.phone,
+      address: v.address || prev.address,
+      tax_id: v.tax_id || prev.tax_id,
+      notes: v.notes || prev.notes,
+    }));
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -48,7 +122,7 @@ export default function VendorFormDialog({ open, onOpenChange, vendor, clientId 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="max-h-[90vh] overflow-y-auto">
         <DialogHeader><DialogTitle>{isEdit ? "Edit Vendor" : "New Vendor"}</DialogTitle></DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           {!clientId && (
@@ -65,7 +139,11 @@ export default function VendorFormDialog({ open, onOpenChange, vendor, clientId 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <Label>Vendor Name</Label>
-              <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
+              <VendorNameCombobox
+                value={form.name}
+                onChange={(name) => setForm({ ...form, name })}
+                onSelectVendor={handleSelectVendor}
+              />
             </div>
             <div className="space-y-1.5">
               <Label>Type</Label>
