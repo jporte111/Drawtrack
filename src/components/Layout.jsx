@@ -37,7 +37,7 @@ export default function Layout() {
           <HardHat className="w-5 h-5 text-slate-900" />
         </div>
         <div>
-          <div className="text-white font-semibold text-sm leading-tight">DrawManager</div>
+          <div className="text-white font-semibold text-sm leading-tight">JLM Draw Manager</div>
           <div className="text-slate-400 text-xs">Construction Draws</div>
         </div>
       </div>
@@ -150,7 +150,7 @@ export default function Layout() {
             <div className="w-7 h-7 rounded-lg bg-amber-500 flex items-center justify-center">
               <HardHat className="w-4 h-4 text-slate-900" />
             </div>
-            <span className="text-white font-semibold text-sm">DrawManager</span>
+            <span className="text-white font-semibold text-sm">JLM Draw Manager</span>
           </div>
         </header>
         <main className="flex-1 overflow-auto">
