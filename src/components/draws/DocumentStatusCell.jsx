@@ -20,6 +20,7 @@ export default function DocumentStatusCell({ doc, drawId }) {
     }
     await base44.entities.Document.update(doc.id, update);
     queryClient.invalidateQueries({ queryKey: ["documents"] });
+    queryClient.invalidateQueries({ queryKey: ["openItems", drawId] });
   };
 
   return (
