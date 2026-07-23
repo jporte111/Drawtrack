@@ -110,10 +110,16 @@ export default function Budget() {
           <p className="text-sm">Click "Set Link" above to paste the Dropbox shared link.</p>
         </div>
       ) : (
-        <div className="bg-white border rounded-xl overflow-hidden">
+        <div className="bg-white border rounded-xl overflow-hidden relative">
+          <div className="absolute inset-0 flex items-center justify-center text-slate-400 pointer-events-none">
+            <div className="flex flex-col items-center gap-2">
+              <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin"></div>
+              <span className="text-sm">Loading budget document...</span>
+            </div>
+          </div>
           <iframe
             src={viewerUrl}
-            className="w-full"
+            className="w-full relative bg-white"
             style={{ minHeight: "75vh" }}
             title="Budget"
           />
