@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
-import { Plus, ClipboardList, Users, Building2 } from "lucide-react";
+import { Plus, ClipboardList, Users, Building2, DollarSign } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ClientFormDialog from "@/components/clients/ClientFormDialog";
 import ClientActionsMenu from "@/components/clients/ClientActionsMenu";
@@ -86,15 +86,20 @@ export default function ClientList() {
                   <div className="text-xs text-slate-500">Vendors</div>
                 </div>
               </div>
-              <div className="flex gap-2 mt-auto">
-                <Link to={`/clients/${client.id}/draws`} className="flex-1">
+              <div className="grid grid-cols-3 gap-2 mt-auto">
+                <Link to={`/clients/${client.id}/draws`}>
                   <Button variant="outline" size="sm" className="w-full">
                     <ClipboardList className="w-3.5 h-3.5 mr-1" />Draws
                   </Button>
                 </Link>
-                <Link to={`/clients/${client.id}/vendors`} className="flex-1">
+                <Link to={`/clients/${client.id}/vendors`}>
                   <Button variant="outline" size="sm" className="w-full">
                     <Users className="w-3.5 h-3.5 mr-1" />Vendors
+                  </Button>
+                </Link>
+                <Link to={`/clients/${client.id}/budget`}>
+                  <Button variant="outline" size="sm" className="w-full">
+                    <DollarSign className="w-3.5 h-3.5 mr-1" />Budget
                   </Button>
                 </Link>
               </div>

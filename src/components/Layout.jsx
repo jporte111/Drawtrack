@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { Outlet, Link, useLocation } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
-import { HardHat, ClipboardList, Users, Menu, X, ChevronDown, ChevronRight, FolderOpen, Building2 } from "lucide-react";
+import { HardHat, ClipboardList, Users, Menu, X, ChevronDown, ChevronRight, FolderOpen, Building2, DollarSign } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default function Layout() {
@@ -110,6 +110,17 @@ export default function Layout() {
                       >
                         <Users className="w-3.5 h-3.5" />
                         Vendors
+                      </Link>
+                      <Link
+                        to={`/clients/${client.id}/budget`}
+                        onClick={() => setSidebarOpen(false)}
+                        className={cn(
+                          "flex items-center gap-2.5 px-3 py-1.5 rounded-md text-sm transition-colors",
+                          location.pathname === `/clients/${client.id}/budget` ? "bg-slate-800 text-white" : "text-slate-400 hover:text-white hover:bg-slate-800/50"
+                        )}
+                      >
+                        <DollarSign className="w-3.5 h-3.5" />
+                        Budget
                       </Link>
                     </div>
                   )}

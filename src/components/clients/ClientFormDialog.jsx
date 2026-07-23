@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-const EMPTY = { name: "", project_name: "", address: "", status: "active", notes: "" };
+const EMPTY = { name: "", project_name: "", address: "", status: "active", budget_url: "", notes: "" };
 
 export default function ClientFormDialog({ open, onOpenChange, client }) {
   const isEdit = !!client;
@@ -56,6 +56,10 @@ export default function ClientFormDialog({ open, onOpenChange, client }) {
           <div className="space-y-1.5">
             <Label>Address</Label>
             <Input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder="Property address" />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Budget Document URL</Label>
+            <Input value={form.budget_url} onChange={(e) => setForm({ ...form, budget_url: e.target.value })} placeholder="Dropbox share link to budget Excel file" />
           </div>
           <div className="space-y-1.5">
             <Label>Status</Label>

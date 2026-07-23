@@ -19,6 +19,9 @@
       ],
       "default": "active"
     },
+    "budget_url": {
+      "type": "string"
+    },
     "notes": {
       "type": "string"
     }

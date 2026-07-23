@@ -1,0 +1,124 @@
+import React, { useState } from "react";
+import { useParams, Link } from "react-router-dom";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { base44 } from "@/api/base44Client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { DollarSign, ExternalLink, Pencil, ArrowLeft } from "lucide-react";
+
+export default function Budget() {
+  const { clientId } = useParams();
+  const queryClient = useQueryClient();
+  const [editing, setEditing] = useState(false);
+  const [urlInput, setUrlInput] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const { data: client, isLoading } = useQuery({
+    queryKey: ["client", clientId],
+    queryFn: () => base44.entities.Client.get(clientId),
+  });
+
+  const budgetUrl = client?.budget_url;
+
+  const startEdit = () => {
+    setUrlInput(budgetUrl || "");
+    setEditing(true);
+  };
+
+  const handleSave = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      await base44.entities.Client.update(clientId, { budget_url: urlInput.trim() });
+      queryClient.invalidateQueries({ queryKey: ["client", clientId] });
+      queryClient.invalidateQueries({ queryKey: ["clients"] });
+      setEditing(false);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Convert a Dropbox share link to a direct-preview embeddable URL
+  const getEmbedUrl = (url) => {
+    if (!url) return null;
+    // Dropbox shared links: replace dl=0 with raw=1 for direct file access
+    if (url.includes("dropbox.com")) {
+      return url.replace("dl=0", "raw=1").replace("?dl=0", "?raw=1");
+    }
+    return url;
+  };
+
+  const embedUrl = budgetUrl ? getEmbedUrl(budgetUrl) : null;
+  // Use Google Docs Viewer to render xlsx files in an iframe
+  const viewerUrl = embedUrl
+    ? `https://docs.google.com/gview?url=${encodeURIComponent(embedUrl)}&embedded=true`
+    : null;
+
+  return (
+    <div className="p-4 md:p-6 max-w-6xl mx-auto">
+      <Link to={`/clients/${clientId}/draws`} className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-900 mb-4">
+        <ArrowLeft className="w-4 h-4" />Back to Draws
+      </Link>
+
+      <div className="flex items-center justify-between gap-3 mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+            <DollarSign className="w-6 h-6 text-emerald-600" />
+            Budget
+          </h1>
+          <p className="text-sm text-slate-500">{client?.name || "Loading..."} — budget & progress</p>
+        </div>
+        <div className="flex items-center gap-2">
+          {budgetUrl && (
+            <a href={budgetUrl} target="_blank" rel="noopener noreferrer">
+              <Button variant="outline" size="sm">
+                <ExternalLink className="w-3.5 h-3.5 mr-1" />Open Original
+              </Button>
+            </a>
+          )}
+          <Button variant="outline" size="sm" onClick={startEdit}>
+            <Pencil className="w-3.5 h-3.5 mr-1" />{budgetUrl ? "Update Link" : "Set Link"}
+          </Button>
+        </div>
+      </div>
+
+      {editing && (
+        <form onSubmit={handleSave} className="mb-6 bg-white border rounded-xl p-4 space-y-3">
+          <div className="space-y-1.5">
+            <Label>Budget Document URL (Dropbox share link or direct file URL)</Label>
+            <Input
+              value={urlInput}
+              onChange={(e) => setUrlInput(e.target.value)}
+              placeholder="https://www.dropbox.com/scl/fi/.../Budget.xlsx?dl=0"
+            />
+            <p className="text-xs text-slate-500">Paste the Dropbox shared link to the budget Excel file. It will auto-update whenever the file in Dropbox changes.</p>
+          </div>
+          <div className="flex gap-2">
+            <Button type="submit" disabled={saving}>{saving ? "Saving..." : "Save"}</Button>
+            <Button type="button" variant="outline" onClick={() => setEditing(false)}>Cancel</Button>
+          </div>
+        </form>
+      )}
+
+      {isLoading ? (
+        <div className="text-center py-12 text-slate-400">Loading...</div>
+      ) : !budgetUrl ? (
+        <div className="text-center py-16 text-slate-400 border border-dashed rounded-xl">
+          <DollarSign className="w-12 h-12 mx-auto mb-3 text-slate-300" />
+          <p className="mb-1">No budget document linked yet.</p>
+          <p className="text-sm">Click "Set Link" above to paste the Dropbox shared link.</p>
+        </div>
+      ) : (
+        <div className="bg-white border rounded-xl overflow-hidden">
+          <iframe
+            src={viewerUrl}
+            className="w-full"
+            style={{ minHeight: "75vh" }}
+            title="Budget"
+          />
+        </div>
+      )}
+    </div>
+  );
+}
