@@ -39,20 +39,20 @@ export default function Budget() {
     }
   };
 
-  // Convert a Dropbox share link to a direct-preview embeddable URL
-  const getEmbedUrl = (url) => {
+  // Convert a Dropbox share link to a direct-download URL that viewers can fetch
+  const getDirectUrl = (url) => {
     if (!url) return null;
-    // Dropbox shared links: replace dl=0 with raw=1 for direct file access
     if (url.includes("dropbox.com")) {
-      return url.replace("dl=0", "raw=1").replace("?dl=0", "?raw=1");
+      // Change dl=0 → dl=1 for direct file download (preserves rlkey auth)
+      return url.replace("dl=0", "dl=1");
     }
     return url;
   };
 
-  const embedUrl = budgetUrl ? getEmbedUrl(budgetUrl) : null;
-  // Use Google Docs Viewer to render xlsx files in an iframe
-  const viewerUrl = embedUrl
-    ? `https://docs.google.com/gview?url=${encodeURIComponent(embedUrl)}&embedded=true`
+  const directUrl = budgetUrl ? getDirectUrl(budgetUrl) : null;
+  // Use Microsoft Office Online viewer for Excel files (handles Dropbox direct links)
+  const viewerUrl = directUrl
+    ? `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(directUrl)}`
     : null;
 
   return (
