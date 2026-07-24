@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useCallback, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
@@ -14,10 +14,42 @@ export default function Budget() {
   const [urlInput, setUrlInput] = useState("");
   const [saving, setSaving] = useState(false);
   const [zoom, setZoom] = useState(1);
+  const [isDragging, setIsDragging] = useState(false);
+  const scrollRef = useRef(null);
+  const dragStart = useRef({ x: 0, y: 0, scrollLeft: 0, scrollTop: 0 });
 
   const zoomIn = () => setZoom((z) => Math.min(z + 0.1, 2));
   const zoomOut = () => setZoom((z) => Math.max(z - 0.1, 0.5));
   const resetZoom = () => setZoom(1);
+
+  const handleMouseDown = useCallback((e) => {
+    if (!scrollRef.current || zoom === 1) return;
+    setIsDragging(true);
+    dragStart.current = {
+      x: e.clientX,
+      y: e.clientY,
+      scrollLeft: scrollRef.current.scrollLeft,
+      scrollTop: scrollRef.current.scrollTop,
+    };
+  }, [zoom]);
+
+  useEffect(() => {
+    if (!isDragging) return;
+    const handleMouseMove = (e) => {
+      if (!scrollRef.current) return;
+      const dx = e.clientX - dragStart.current.x;
+      const dy = e.clientY - dragStart.current.y;
+      scrollRef.current.scrollLeft = dragStart.current.scrollLeft - dx;
+      scrollRef.current.scrollTop = dragStart.current.scrollTop - dy;
+    };
+    const handleMouseUp = () => setIsDragging(false);
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+    return () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [isDragging]);
 
   const { data: client, isLoading } = useQuery({
     queryKey: ["client", clientId],
@@ -130,9 +162,17 @@ export default function Budget() {
             </div>
             <span className="text-sm text-slate-500 tabular-nums">{Math.round(zoom * 100)}%</span>
           </div>
-          <div className="overflow-auto bg-slate-100" style={{ height: "75vh" }}>
-            <div className="relative flex items-center justify-center text-slate-400" style={{ minHeight: "75vh" }}>
-              <div className="absolute inset-0 flex items-center justify-center text-slate-400 pointer-events-none">
+          <div
+            ref={scrollRef}
+            className="overflow-auto bg-slate-100 select-none"
+            style={{ height: "75vh", cursor: zoom > 1 ? (isDragging ? "grabbing" : "grab") : "default" }}
+            onMouseDown={handleMouseDown}
+          >
+            <div
+              className="relative"
+              style={{ width: `${zoom * 100}%`, height: `${75 * zoom}vh` }}
+            >
+              <div className="absolute inset-0 flex items-center justify-center text-slate-400 pointer-events-none z-10">
                 <div className="flex flex-col items-center gap-2">
                   <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin"></div>
                   <span className="text-sm">Loading budget document...</span>
@@ -141,15 +181,15 @@ export default function Budget() {
               <div
                 style={{
                   transform: `scale(${zoom})`,
-                  transformOrigin: "top center",
-                  width: "100%",
-                  height: "75vh",
+                  transformOrigin: "top left",
+                  width: `${100 / zoom}%`,
+                  height: `${75 / zoom}vh`,
                 }}
               >
                 <iframe
                   src={viewerUrl}
-                  className="bg-white border-0 w-full"
-                  style={{ height: "75vh" }}
+                  className="bg-white border-0"
+                  style={{ width: "100%", height: "100%", pointerEvents: isDragging ? "none" : "auto" }}
                   title="Budget"
                 />
               </div>
