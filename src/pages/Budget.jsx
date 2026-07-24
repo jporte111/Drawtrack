@@ -5,7 +5,7 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { DollarSign, ExternalLink, Pencil, ArrowLeft } from "lucide-react";
+import { DollarSign, ExternalLink, Pencil, ArrowLeft, ZoomIn, ZoomOut, Maximize } from "lucide-react";
 
 export default function Budget() {
   const { clientId } = useParams();
@@ -13,6 +13,11 @@ export default function Budget() {
   const [editing, setEditing] = useState(false);
   const [urlInput, setUrlInput] = useState("");
   const [saving, setSaving] = useState(false);
+  const [zoom, setZoom] = useState(1);
+
+  const zoomIn = () => setZoom((z) => Math.min(z + 0.1, 2));
+  const zoomOut = () => setZoom((z) => Math.max(z - 0.1, 0.5));
+  const resetZoom = () => setZoom(1);
 
   const { data: client, isLoading } = useQuery({
     queryKey: ["client", clientId],
@@ -110,19 +115,37 @@ export default function Budget() {
           <p className="text-sm">Click "Set Link" above to paste the Dropbox shared link.</p>
         </div>
       ) : (
-        <div className="bg-white border rounded-xl overflow-hidden relative">
-          <div className="absolute inset-0 flex items-center justify-center text-slate-400 pointer-events-none">
-            <div className="flex flex-col items-center gap-2">
-              <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin"></div>
-              <span className="text-sm">Loading budget document...</span>
+        <div className="bg-white border rounded-xl overflow-hidden">
+          <div className="flex items-center justify-between px-3 py-2 border-b bg-slate-50">
+            <div className="flex items-center gap-1">
+              <Button variant="outline" size="icon" onClick={zoomOut} disabled={zoom <= 0.5}>
+                <ZoomOut className="w-4 h-4" />
+              </Button>
+              <Button variant="outline" size="icon" onClick={zoomIn} disabled={zoom >= 2}>
+                <ZoomIn className="w-4 h-4" />
+              </Button>
+              <Button variant="outline" size="icon" onClick={resetZoom}>
+                <Maximize className="w-4 h-4" />
+              </Button>
+            </div>
+            <span className="text-sm text-slate-500 tabular-nums">{Math.round(zoom * 100)}%</span>
+          </div>
+          <div className="overflow-auto" style={{ maxHeight: "75vh" }}>
+            <div className="relative flex items-center justify-center text-slate-400" style={{ minHeight: "75vh" }}>
+              <div className="absolute inset-0 flex items-center justify-center text-slate-400 pointer-events-none">
+                <div className="flex flex-col items-center gap-2">
+                  <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin"></div>
+                  <span className="text-sm">Loading budget document...</span>
+                </div>
+              </div>
+              <iframe
+                src={viewerUrl}
+                className="bg-white border-0"
+                style={{ width: `${100 / zoom}%`, minHeight: "75vh" }}
+                title="Budget"
+              />
             </div>
           </div>
-          <iframe
-            src={viewerUrl}
-            className="w-full relative bg-white"
-            style={{ minHeight: "75vh" }}
-            title="Budget"
-          />
         </div>
       )}
     </div>
