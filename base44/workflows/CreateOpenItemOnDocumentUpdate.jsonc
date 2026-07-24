@@ -1,6 +1,6 @@
 {
   "name": "Create Open Item on Document Update",
-  "description": "When a Document's status changes to Missing, automatically creates an Open Item linked to the document's Draw Vendor and Draw Cycle. The Open Item title is set based on the document type (Invoice, Conditional lien release, or Unconditional lien release).",
+  "description": "When a Document's status changes to Missing, Pending Signature, or Needs Correction, automatically creates (or updates) an Open Item linked to the document's Draw Vendor and Draw Cycle. The Open Item title reflects the current status and document type.",
   "trigger": {
     "config": {
       "trigger_type": "entity",
@@ -9,7 +9,7 @@
         "update"
       ]
     },
-    "condition": "${ .trigger.data.status == \"missing\" and (.trigger.changed_fields | index(\"status\") != null) }"
+    "condition": "${ (.trigger.data.status == \"missing\" or .trigger.data.status == \"pending_signature\" or .trigger.data.status == \"needs_correction\") and (.trigger.changed_fields | index(\"status\") != null) }"
   },
   "definition": {
     "document": {
@@ -27,7 +27,8 @@
             "args": {
               "document_id": "${ .trigger.entity_id }",
               "draw_vendor_id": "${ .trigger.data.draw_vendor_id }",
-              "document_type": "${ .trigger.data.document_type }"
+              "document_type": "${ .trigger.data.document_type }",
+              "status": "${ .trigger.data.status }"
             }
           },
           "then": "end",
