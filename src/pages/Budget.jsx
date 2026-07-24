@@ -23,11 +23,6 @@ export default function Budget() {
   const zoomOut = () => setZoom((z) => Math.max(z - 0.1, 0.5));
   const resetZoom = () => setZoom(1);
 
-  // Hide the loading spinner once the iframe finishes loading
-  useEffect(() => {
-    if (!viewerUrl) setIframeLoaded(false);
-  }, [viewerUrl]);
-
   const handleMouseDown = useCallback((e) => {
     if (!scrollRef.current || zoom === 1) return;
     setIsDragging(true);
@@ -97,6 +92,11 @@ export default function Budget() {
   const viewerUrl = directUrl
     ? `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(directUrl)}`
     : null;
+
+  // Reset the loaded flag whenever the document URL changes
+  useEffect(() => {
+    setIframeLoaded(false);
+  }, [viewerUrl]);
 
   return (
     <div className="p-4 md:p-6 max-w-6xl mx-auto">
@@ -200,6 +200,7 @@ export default function Budget() {
                   style={{ width: "100%", height: "100%", pointerEvents: zoom > 1 ? "none" : "auto" }}
                   title="Budget"
                   onLoad={() => setIframeLoaded(true)}
+                  key={viewerUrl}
                 />
               </div>
             </div>
