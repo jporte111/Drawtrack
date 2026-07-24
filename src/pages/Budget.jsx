@@ -5,7 +5,7 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { DollarSign, ExternalLink, Pencil, ArrowLeft, ZoomIn, ZoomOut, Maximize } from "lucide-react";
+import { DollarSign, ExternalLink, Pencil, ArrowLeft, ZoomIn, ZoomOut, Maximize, Hand, MousePointer } from "lucide-react";
 
 export default function Budget() {
   const { clientId } = useParams();
@@ -16,6 +16,7 @@ export default function Budget() {
   const [zoom, setZoom] = useState(1);
   const [iframeLoaded, setIframeLoaded] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [panMode, setPanMode] = useState(true);
   const scrollRef = useRef(null);
   const dragStart = useRef({ x: 0, y: 0, scrollLeft: 0, scrollTop: 0 });
 
@@ -24,7 +25,7 @@ export default function Budget() {
   const resetZoom = () => setZoom(1);
 
   const handleMouseDown = useCallback((e) => {
-    if (!scrollRef.current || zoom === 1) return;
+    if (!scrollRef.current || zoom === 1 || !panMode) return;
     setIsDragging(true);
     dragStart.current = {
       x: e.clientX,
@@ -165,13 +166,23 @@ export default function Budget() {
               <Button variant="outline" size="icon" onClick={resetZoom}>
                 <Maximize className="w-4 h-4" />
               </Button>
+              {zoom > 1 && (
+                <Button
+                  variant={panMode ? "default" : "outline"}
+                  size="icon"
+                  onClick={() => setPanMode((p) => !p)}
+                  title={panMode ? "Pan mode (drag to move)" : "Interact mode (use document scrollbars)"}
+                >
+                  {panMode ? <Hand className="w-4 h-4" /> : <MousePointer className="w-4 h-4" />}
+                </Button>
+              )}
             </div>
             <span className="text-sm text-slate-500 tabular-nums">{Math.round(zoom * 100)}%</span>
           </div>
           <div
             ref={scrollRef}
             className="overflow-auto bg-slate-100 select-none"
-            style={{ height: "75vh", cursor: zoom > 1 ? (isDragging ? "grabbing" : "grab") : "default" }}
+            style={{ height: "75vh", cursor: zoom > 1 && panMode ? (isDragging ? "grabbing" : "grab") : "default" }}
             onMouseDown={handleMouseDown}
           >
             <div
@@ -197,7 +208,7 @@ export default function Budget() {
                 <iframe
                   src={viewerUrl}
                   className="bg-white border-0"
-                  style={{ width: "100%", height: "100%", pointerEvents: zoom > 1 ? "none" : "auto" }}
+                  style={{ width: "100%", height: "100%", pointerEvents: zoom > 1 && panMode ? "none" : "auto" }}
                   title="Budget"
                   onLoad={() => setIframeLoaded(true)}
                   key={viewerUrl}
