@@ -1,16 +1,31 @@
-import React from "react";
+import React, { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import StatusBadge from "@/components/StatusBadge";
 import { priorityConfig } from "@/lib/statusConfig";
 import { formatDate } from "@/lib/format";
 
+const PRIORITIES = ["low", "medium", "high", "critical"];
+
 export default function OpenItemDetailDialog({ item, vendorName, open, onOpenChange }) {
   const queryClient = useQueryClient();
+  const [priority, setPriority] = useState(item?.priority);
+
+  React.useEffect(() => {
+    if (open) setPriority(item?.priority);
+  }, [open, item]);
 
   if (!item) return null;
+
+  const handlePriorityChange = async (value) => {
+    setPriority(value);
+    await base44.entities.OpenItem.update(item.id, { priority: value });
+    queryClient.invalidateQueries({ queryKey: ["openItems", item.draw_cycle_id] });
+    queryClient.invalidateQueries({ queryKey: ["openItems", "all"] });
+  };
 
   const handleResolve = async () => {
     await base44.entities.OpenItem.update(item.id, {
@@ -27,7 +42,7 @@ export default function OpenItemDetailDialog({ item, vendorName, open, onOpenCha
       <DialogContent>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <StatusBadge status={item.priority} config={priorityConfig} />
+            <StatusBadge status={priority} config={priorityConfig} />
             {item.title}
           </DialogTitle>
         </DialogHeader>
@@ -44,6 +59,15 @@ export default function OpenItemDetailDialog({ item, vendorName, open, onOpenCha
             <div>
               <div className="text-xs text-slate-500 uppercase tracking-wide mb-0.5">Due Date</div>
               <div className="font-medium text-slate-900">{formatDate(item.due_date)}</div>
+            </div>
+            <div>
+              <div className="text-xs text-slate-500 uppercase tracking-wide mb-0.5">Priority</div>
+              <Select value={priority} onValueChange={handlePriorityChange}>
+                <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {PRIORITIES.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <div className="text-xs text-slate-500 uppercase tracking-wide mb-0.5">Status</div>
