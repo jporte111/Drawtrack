@@ -189,7 +189,7 @@ export default function Budget() {
                 <iframe
                   src={viewerUrl}
                   className="bg-white border-0"
-                  style={{ width: "100%", height: "100%", pointerEvents: isDragging ? "none" : "auto" }}
+                  style={{ width: "100%", height: "100%", pointerEvents: zoom > 1 ? "none" : "auto" }}
                   title="Budget"
                 />
               </div>
