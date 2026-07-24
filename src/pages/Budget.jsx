@@ -14,6 +14,7 @@ export default function Budget() {
   const [urlInput, setUrlInput] = useState("");
   const [saving, setSaving] = useState(false);
   const [zoom, setZoom] = useState(1);
+  const [iframeLoaded, setIframeLoaded] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const scrollRef = useRef(null);
   const dragStart = useRef({ x: 0, y: 0, scrollLeft: 0, scrollTop: 0 });
@@ -21,6 +22,11 @@ export default function Budget() {
   const zoomIn = () => setZoom((z) => Math.min(z + 0.1, 2));
   const zoomOut = () => setZoom((z) => Math.max(z - 0.1, 0.5));
   const resetZoom = () => setZoom(1);
+
+  // Hide the loading spinner once the iframe finishes loading
+  useEffect(() => {
+    if (!viewerUrl) setIframeLoaded(false);
+  }, [viewerUrl]);
 
   const handleMouseDown = useCallback((e) => {
     if (!scrollRef.current || zoom === 1) return;
@@ -172,12 +178,14 @@ export default function Budget() {
               className="relative"
               style={{ width: `${zoom * 100}%`, height: `${75 * zoom}vh` }}
             >
-              <div className="absolute inset-0 flex items-center justify-center text-slate-400 pointer-events-none z-10">
-                <div className="flex flex-col items-center gap-2">
-                  <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin"></div>
-                  <span className="text-sm">Loading budget document...</span>
+              {!iframeLoaded && (
+                <div className="absolute inset-0 flex items-center justify-center text-slate-400 pointer-events-none z-10">
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin"></div>
+                    <span className="text-sm">Loading budget document...</span>
+                  </div>
                 </div>
-              </div>
+              )}
               <div
                 style={{
                   transform: `scale(${zoom})`,
@@ -191,6 +199,7 @@ export default function Budget() {
                   className="bg-white border-0"
                   style={{ width: "100%", height: "100%", pointerEvents: zoom > 1 ? "none" : "auto" }}
                   title="Budget"
+                  onLoad={() => setIframeLoaded(true)}
                 />
               </div>
             </div>
