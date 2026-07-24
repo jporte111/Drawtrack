@@ -130,7 +130,7 @@ export default function Budget() {
             </div>
             <span className="text-sm text-slate-500 tabular-nums">{Math.round(zoom * 100)}%</span>
           </div>
-          <div className="overflow-auto" style={{ maxHeight: "75vh" }}>
+          <div className="overflow-auto bg-slate-100" style={{ height: "75vh" }}>
             <div className="relative flex items-center justify-center text-slate-400" style={{ minHeight: "75vh" }}>
               <div className="absolute inset-0 flex items-center justify-center text-slate-400 pointer-events-none">
                 <div className="flex flex-col items-center gap-2">
@@ -138,12 +138,21 @@ export default function Budget() {
                   <span className="text-sm">Loading budget document...</span>
                 </div>
               </div>
-              <iframe
-                src={viewerUrl}
-                className="bg-white border-0"
-                style={{ width: `${100 / zoom}%`, minHeight: "75vh" }}
-                title="Budget"
-              />
+              <div
+                style={{
+                  transform: `scale(${zoom})`,
+                  transformOrigin: "top center",
+                  width: "100%",
+                  height: "75vh",
+                }}
+              >
+                <iframe
+                  src={viewerUrl}
+                  className="bg-white border-0 w-full"
+                  style={{ height: "75vh" }}
+                  title="Budget"
+                />
+              </div>
             </div>
           </div>
         </div>
