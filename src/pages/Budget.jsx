@@ -186,8 +186,8 @@ export default function Budget() {
             onMouseDown={handleMouseDown}
           >
             <div
-              className="relative"
-              style={{ width: `${zoom * 100}%`, height: `${75 * zoom}vh` }}
+              className="relative overflow-hidden"
+              style={{ width: `${Math.max(zoom, 1) * 100}%`, height: `${75 * Math.max(zoom, 1)}vh` }}
             >
               {!iframeLoaded && (
                 <div className="absolute inset-0 flex items-center justify-center text-slate-400 pointer-events-none z-10">
