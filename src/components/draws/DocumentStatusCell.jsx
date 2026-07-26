@@ -19,6 +19,17 @@ export default function DocumentStatusCell({ doc, drawId }) {
       update.received_date = new Date().toISOString().split("T")[0];
     }
     await base44.entities.Document.update(doc.id, update);
+
+    if (status === "complete" || status === "na") {
+      const today = new Date().toISOString().split("T")[0];
+      const items = await base44.entities.OpenItem.filter({ document_id: doc.id });
+      await Promise.all(
+        items
+          .filter((i) => i.status === "open" || i.status === "in_progress")
+          .map((i) => base44.entities.OpenItem.update(i.id, { status: "resolved", resolved_date: today }))
+      );
+    }
+
     queryClient.invalidateQueries({ queryKey: ["documents"] });
     queryClient.invalidateQueries({ queryKey: ["openItems", drawId] });
   };
