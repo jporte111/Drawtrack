@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import StatusBadge from "@/components/StatusBadge";
@@ -13,9 +14,13 @@ const PRIORITIES = ["low", "medium", "high", "critical"];
 export default function OpenItemDetailDialog({ item, vendorName, open, onOpenChange }) {
   const queryClient = useQueryClient();
   const [priority, setPriority] = useState(item?.priority);
+  const [assignedTo, setAssignedTo] = useState(item?.assigned_to || "");
 
   React.useEffect(() => {
-    if (open) setPriority(item?.priority);
+    if (open) {
+      setPriority(item?.priority);
+      setAssignedTo(item?.assigned_to || "");
+    }
   }, [open, item]);
 
   if (!item) return null;
@@ -23,6 +28,14 @@ export default function OpenItemDetailDialog({ item, vendorName, open, onOpenCha
   const handlePriorityChange = async (value) => {
     setPriority(value);
     await base44.entities.OpenItem.update(item.id, { priority: value });
+    queryClient.invalidateQueries({ queryKey: ["openItems", item.draw_cycle_id] });
+    queryClient.invalidateQueries({ queryKey: ["openItems", "all"] });
+  };
+
+  const handleAssigneeSave = async () => {
+    const value = assignedTo.trim();
+    if (value === (item.assigned_to || "")) return;
+    await base44.entities.OpenItem.update(item.id, { assigned_to: value });
     queryClient.invalidateQueries({ queryKey: ["openItems", item.draw_cycle_id] });
     queryClient.invalidateQueries({ queryKey: ["openItems", "all"] });
   };
@@ -54,7 +67,14 @@ export default function OpenItemDetailDialog({ item, vendorName, open, onOpenCha
             </div>
             <div>
               <div className="text-xs text-slate-500 uppercase tracking-wide mb-0.5">Assignee</div>
-              <div className="font-medium text-slate-900">{item.assigned_to || "Unassigned"}</div>
+              <Input
+                value={assignedTo}
+                onChange={(e) => setAssignedTo(e.target.value)}
+                onBlur={handleAssigneeSave}
+                onKeyDown={(e) => { if (e.key === "Enter") e.target.blur(); }}
+                placeholder="Unassigned"
+                className="h-8 text-sm"
+              />
             </div>
             <div>
               <div className="text-xs text-slate-500 uppercase tracking-wide mb-0.5">Due Date</div>
