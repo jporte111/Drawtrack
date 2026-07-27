@@ -12,6 +12,47 @@ import GenerateLienReleasesDialog from "./GenerateLienReleasesDialog";
 
 const DV_STATUSES = ["pending", "documents_requested", "documents_received", "under_review", "complete"];
 
+function EditableAmount({ dvId, amount, onSave }) {
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(amount != null ? String(amount) : "");
+
+  if (editing) {
+    return (
+      <input
+        autoFocus
+        type="number"
+        step="0.01"
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        onBlur={() => {
+          setEditing(false);
+          onSave(parseFloat(value) || 0);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            setEditing(false);
+            onSave(parseFloat(value) || 0);
+          }
+          if (e.key === "Escape") {
+            setEditing(false);
+            setValue(amount != null ? String(amount) : "");
+          }
+        }}
+        className="h-7 w-28 rounded border border-input bg-transparent px-2 text-sm text-right focus:outline-none focus:ring-1 focus:ring-ring"
+      />
+    );
+  }
+
+  return (
+    <button
+      onClick={() => setEditing(true)}
+      className="text-right font-medium w-full hover:bg-slate-100 rounded px-1 py-0.5 cursor-text"
+    >
+      {formatCurrency(amount)}
+    </button>
+  );
+}
+
 export default function VendorChecklist({ drawId }) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [genDialogOpen, setGenDialogOpen] = useState(false);
@@ -47,6 +88,11 @@ export default function VendorChecklist({ drawId }) {
 
   const handleDVStatusChange = async (dvId, status) => {
     await base44.entities.DrawVendor.update(dvId, { status });
+    queryClient.invalidateQueries({ queryKey: ["drawVendors", drawId] });
+  };
+
+  const handleAmountChange = async (dvId, newAmount) => {
+    await base44.entities.DrawVendor.update(dvId, { amount: newAmount });
     queryClient.invalidateQueries({ queryKey: ["drawVendors", drawId] });
   };
 
@@ -115,7 +161,9 @@ export default function VendorChecklist({ drawId }) {
                         )}
                       </td>
                       <td className="px-2 py-2.5 text-slate-600 max-w-[140px] truncate">{dv.scope_of_work || "—"}</td>
-                      <td className="px-2 py-2.5 text-right font-medium">{formatCurrency(dv.amount)}</td>
+                      <td className="px-2 py-2.5 text-right">
+                        <EditableAmount dvId={dv.id} amount={dv.amount} onSave={(amt) => handleAmountChange(dv.id, amt)} />
+                      </td>
                       <td className="px-2 py-2"><DocumentStatusCell doc={docs.invoice} drawId={drawId} /></td>
                       <td className="px-2 py-2"><DocumentStatusCell doc={docs.conditional_lien_release} drawId={drawId} /></td>
                       <td className="px-2 py-2"><DocumentStatusCell doc={docs.unconditional_lien_release} drawId={drawId} /></td>
@@ -169,7 +217,9 @@ export default function VendorChecklist({ drawId }) {
                         </Popover>
                       )}
                     </div>
-                    <div className="font-medium text-sm shrink-0">{formatCurrency(dv.amount)}</div>
+                    <div className="font-medium text-sm shrink-0">
+                      <EditableAmount dvId={dv.id} amount={dv.amount} onSave={(amt) => handleAmountChange(dv.id, amt)} />
+                    </div>
                   </div>
                   <div className="grid grid-cols-1 gap-2">
                     <div className="flex items-center justify-between gap-2">
