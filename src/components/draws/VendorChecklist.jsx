@@ -51,10 +51,12 @@ export default function VendorChecklist({ drawId }) {
   };
 
   const handleRemoveVendor = async (dvId) => {
+    await base44.entities.OpenItem.deleteMany({ draw_vendor_id: dvId });
     await base44.entities.Document.deleteMany({ draw_vendor_id: dvId });
     await base44.entities.DrawVendor.delete(dvId);
     queryClient.invalidateQueries({ queryKey: ["drawVendors", drawId] });
     queryClient.invalidateQueries({ queryKey: ["documents"] });
+    queryClient.invalidateQueries({ queryKey: ["openItems", drawId] });
   };
 
   const openGenerateDialog = (vendorName, amount) => {
