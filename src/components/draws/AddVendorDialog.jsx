@@ -7,13 +7,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import InvoiceUpload from "./InvoiceUpload";
+import { Plus } from "lucide-react";
+import { formatCurrency } from "@/lib/format";
+import InvoiceItem from "./InvoiceItem";
 
 export default function AddVendorDialog({ open, onOpenChange, drawId, clientId }) {
   const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({ vendor_id: "", scope_of_work: "", amount: "", notes: "" });
-  const [invoiceFileUrl, setInvoiceFileUrl] = useState("");
+  const [form, setForm] = useState({ vendor_id: "", scope_of_work: "", notes: "" });
+  const [invoices, setInvoices] = useState([]);
   const [extracted, setExtracted] = useState(false);
 
   const { data: vendors = [] } = useQuery({
@@ -30,20 +32,32 @@ export default function AddVendorDialog({ open, onOpenChange, drawId, clientId }
 
   useEffect(() => {
     if (open) {
-      setForm({ vendor_id: "", scope_of_work: "", amount: "", notes: "" });
-      setInvoiceFileUrl("");
+      setForm({ vendor_id: "", scope_of_work: "", notes: "" });
+      setInvoices([]);
       setExtracted(false);
     }
   }, [open]);
 
-  const handleExtracted = async (data) => {
+  const totalAmount = invoices.reduce((sum, inv) => sum + (parseFloat(inv.amount) || 0), 0);
+
+  const handleAddInvoice = () => {
+    setInvoices((prev) => [...prev, { file_url: "", filename: "", amount: "", uploading: false, error: "" }]);
+  };
+
+  const handleInvoiceChange = (index, updated) => {
+    setInvoices((prev) => prev.map((inv, i) => (i === index ? updated : inv)));
+  };
+
+  const handleInvoiceRemove = (index) => {
+    setInvoices((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleFirstInvoiceExtracted = async (data) => {
+    setExtracted(true);
     setForm((f) => ({
       ...f,
       scope_of_work: data.scope_of_work || f.scope_of_work,
-      amount: data.amount != null ? String(data.amount) : f.amount,
     }));
-    setInvoiceFileUrl(data.invoice_file_url || "");
-    setExtracted(true);
 
     if (data.vendor_name) {
       const lower = data.vendor_name.toLowerCase();
@@ -78,18 +92,31 @@ export default function AddVendorDialog({ open, onOpenChange, drawId, clientId }
         draw_cycle_id: drawId,
         vendor_id: form.vendor_id,
         scope_of_work: form.scope_of_work,
-        amount: form.amount ? Number(form.amount) : null,
+        amount: totalAmount || null,
         notes: form.notes,
         status: "pending",
       });
-      const invoiceDoc = invoiceFileUrl
-        ? { draw_vendor_id: dv.id, document_type: "invoice", status: "complete", file_url: invoiceFileUrl, amount: form.amount ? Number(form.amount) : null, received_date: new Date().toISOString().split("T")[0] }
-        : { draw_vendor_id: dv.id, document_type: "invoice", status: "missing" };
-      await base44.entities.Document.bulkCreate([
-        invoiceDoc,
+
+      const docsToCreate = [];
+      const uploadedInvoices = invoices.filter((inv) => inv.file_url);
+      for (const inv of uploadedInvoices) {
+        docsToCreate.push({
+          draw_vendor_id: dv.id,
+          document_type: "invoice",
+          status: "complete",
+          file_url: inv.file_url,
+          amount: inv.amount ? Number(inv.amount) : null,
+          received_date: new Date().toISOString().split("T")[0],
+        });
+      }
+      if (uploadedInvoices.length === 0) {
+        docsToCreate.push({ draw_vendor_id: dv.id, document_type: "invoice", status: "missing" });
+      }
+      docsToCreate.push(
         { draw_vendor_id: dv.id, document_type: "conditional_lien_release", status: "missing" },
-        { draw_vendor_id: dv.id, document_type: "unconditional_lien_release", status: "missing" },
-      ]);
+        { draw_vendor_id: dv.id, document_type: "unconditional_lien_release", status: "missing" }
+      );
+      await base44.entities.Document.bulkCreate(docsToCreate);
       queryClient.invalidateQueries({ queryKey: ["drawVendors", drawId] });
       queryClient.invalidateQueries({ queryKey: ["documents"] });
       onOpenChange(false);
@@ -100,10 +127,32 @@ export default function AddVendorDialog({ open, onOpenChange, drawId, clientId }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="max-h-[90vh] overflow-y-auto">
         <DialogHeader><DialogTitle>Add Vendor to Draw</DialogTitle></DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <InvoiceUpload onExtracted={handleExtracted} />
+          <div className="space-y-2">
+            <Label>Invoices</Label>
+            {invoices.map((inv, index) => (
+              <InvoiceItem
+                key={index}
+                invoice={inv}
+                onChange={(updated) => handleInvoiceChange(index, updated)}
+                onRemove={() => handleInvoiceRemove(index)}
+                onExtracted={index === 0 ? handleFirstInvoiceExtracted : undefined}
+              />
+            ))}
+            <Button type="button" variant="outline" size="sm" onClick={handleAddInvoice}>
+              <Plus className="w-3.5 h-3.5 mr-1.5" />Add Invoice
+            </Button>
+          </div>
+
+          {invoices.length > 0 && (
+            <div className="flex items-center justify-between text-sm bg-slate-50 rounded-md px-3 py-2">
+              <span className="text-slate-600">Total Amount</span>
+              <span className="font-semibold text-slate-900">{formatCurrency(totalAmount)}</span>
+            </div>
+          )}
+
           {extracted && (
             <p className="text-xs text-blue-600 bg-blue-50 rounded-md px-3 py-2">
               Fields below were auto-filled from the invoice — please review.
@@ -124,10 +173,6 @@ export default function AddVendorDialog({ open, onOpenChange, drawId, clientId }
           <div className="space-y-1.5">
             <Label>Scope of Work</Label>
             <Input value={form.scope_of_work} onChange={(e) => setForm({ ...form, scope_of_work: e.target.value })} placeholder="e.g., Foundation pour" />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Amount ($)</Label>
-            <Input type="number" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} />
           </div>
           <div className="space-y-1.5">
             <Label>Notes</Label>

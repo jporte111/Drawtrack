@@ -7,6 +7,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Plus, Trash2, FileText, StickyNote, Pencil } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
 import AddVendorDialog from "./AddVendorDialog";
+import InvoiceStatusCell from "./InvoiceStatusCell";
 import DocumentStatusCell from "./DocumentStatusCell";
 import GenerateLienReleasesDialog from "./GenerateLienReleasesDialog";
 
@@ -83,8 +84,12 @@ export default function VendorChecklist({ drawId }) {
   const docsByDV = allDocs
     .filter((d) => dvIds.has(d.draw_vendor_id))
     .reduce((acc, doc) => {
-      if (!acc[doc.draw_vendor_id]) acc[doc.draw_vendor_id] = {};
-      acc[doc.draw_vendor_id][doc.document_type] = doc;
+      if (!acc[doc.draw_vendor_id]) acc[doc.draw_vendor_id] = { invoices: [] };
+      if (doc.document_type === "invoice") {
+        acc[doc.draw_vendor_id].invoices.push(doc);
+      } else {
+        acc[doc.draw_vendor_id][doc.document_type] = doc;
+      }
       return acc;
     }, {});
 
@@ -166,7 +171,7 @@ export default function VendorChecklist({ drawId }) {
                       <td className="px-2 py-2.5 text-right group">
                         <EditableAmount dvId={dv.id} amount={dv.amount} onSave={(amt) => handleAmountChange(dv.id, amt)} />
                       </td>
-                      <td className="px-2 py-2"><DocumentStatusCell doc={docs.invoice} drawId={drawId} /></td>
+                      <td className="px-2 py-2"><InvoiceStatusCell invoices={docs.invoices} drawId={drawId} /></td>
                       <td className="px-2 py-2"><DocumentStatusCell doc={docs.conditional_lien_release} drawId={drawId} /></td>
                       <td className="px-2 py-2"><DocumentStatusCell doc={docs.unconditional_lien_release} drawId={drawId} /></td>
                       <td className="px-2 py-2">
@@ -226,7 +231,7 @@ export default function VendorChecklist({ drawId }) {
                   <div className="grid grid-cols-1 gap-2">
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-xs text-slate-500 shrink-0">Invoice</span>
-                      <div className="flex-1 min-w-0"><DocumentStatusCell doc={docs.invoice} drawId={drawId} /></div>
+                      <div className="flex-1 min-w-0"><InvoiceStatusCell invoices={docs.invoices} drawId={drawId} /></div>
                     </div>
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-xs text-slate-500 shrink-0">Cond. Release</span>
