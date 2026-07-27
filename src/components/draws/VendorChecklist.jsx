@@ -4,7 +4,7 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Plus, Trash2, FileText, StickyNote } from "lucide-react";
+import { Plus, Trash2, FileText, StickyNote, Pencil } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
 import AddVendorDialog from "./AddVendorDialog";
 import DocumentStatusCell from "./DocumentStatusCell";
@@ -46,9 +46,11 @@ function EditableAmount({ dvId, amount, onSave }) {
   return (
     <button
       onClick={() => setEditing(true)}
-      className="text-right font-medium w-full hover:bg-slate-100 rounded px-1 py-0.5 cursor-text"
+      className="inline-flex items-center gap-1 text-right font-medium rounded px-1.5 py-0.5 hover:underline hover:decoration-dotted cursor-text"
+      title="Click to edit amount"
     >
       {formatCurrency(amount)}
+      <Pencil className="w-3 h-3 text-slate-400 opacity-0 group-hover:opacity-100" />
     </button>
   );
 }
@@ -161,7 +163,7 @@ export default function VendorChecklist({ drawId }) {
                         )}
                       </td>
                       <td className="px-2 py-2.5 text-slate-600 max-w-[140px] truncate">{dv.scope_of_work || "—"}</td>
-                      <td className="px-2 py-2.5 text-right">
+                      <td className="px-2 py-2.5 text-right group">
                         <EditableAmount dvId={dv.id} amount={dv.amount} onSave={(amt) => handleAmountChange(dv.id, amt)} />
                       </td>
                       <td className="px-2 py-2"><DocumentStatusCell doc={docs.invoice} drawId={drawId} /></td>
