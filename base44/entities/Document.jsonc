@@ -9,6 +9,7 @@
       "type": "string",
       "enum": [
         "invoice",
+        "receipt",
         "conditional_lien_release",
         "unconditional_lien_release"
       ]

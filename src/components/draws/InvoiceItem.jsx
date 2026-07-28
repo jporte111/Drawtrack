@@ -3,6 +3,7 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Upload, Loader2, CheckCircle, X } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const EXTRACTION_SCHEMA = {
   type: "object",
@@ -75,6 +76,18 @@ export default function InvoiceItem({ invoice, onChange, onRemove, onExtracted }
       </div>
       {invoice.error && <p className="text-xs text-red-600">{invoice.error}</p>}
       <div className="flex items-center gap-2">
+        <Select
+          value={invoice.doc_type || "invoice"}
+          onValueChange={(v) => update({ doc_type: v })}
+        >
+          <SelectTrigger className="h-8 w-32 text-xs">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="invoice">Invoice</SelectItem>
+            <SelectItem value="receipt">Receipt</SelectItem>
+          </SelectContent>
+        </Select>
         <span className="text-xs text-slate-500 w-16 shrink-0">Amount $</span>
         <Input
           type="number"

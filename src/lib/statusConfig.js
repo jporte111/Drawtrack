@@ -39,6 +39,7 @@ export const priorityConfig = {
 
 export const openItemDocTypeConfig = {
   invoice: { label: "Invoice", className: "bg-red-100 text-red-700", borderClass: "border-l-red-500" },
+  receipt: { label: "Receipt", className: "bg-cyan-100 text-cyan-700", borderClass: "border-l-cyan-500" },
   conditional_lien_release: { label: "Cond. Release", className: "bg-amber-100 text-amber-700", borderClass: "border-l-amber-500" },
   unconditional_lien_release: { label: "Uncond. Release", className: "bg-purple-100 text-purple-700", borderClass: "border-l-purple-500" },
 };

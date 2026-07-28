@@ -22,7 +22,7 @@ export default function AddInvoiceDialog({ open, onOpenChange, drawVendorId, dra
   const totalAmount = invoices.reduce((sum, inv) => sum + (parseFloat(inv.amount) || 0), 0);
 
   const handleAddInvoice = () => {
-    setInvoices((prev) => [...prev, { file_url: "", filename: "", amount: "", uploading: false, error: "" }]);
+    setInvoices((prev) => [...prev, { file_url: "", filename: "", amount: "", uploading: false, error: "", doc_type: "invoice" }]);
   };
 
   const handleInvoiceChange = (index, updated) => {
@@ -41,7 +41,7 @@ export default function AddInvoiceDialog({ open, onOpenChange, drawVendorId, dra
         .filter((inv) => inv.file_url || inv.amount)
         .map((inv) => ({
           draw_vendor_id: drawVendorId,
-          document_type: "invoice",
+          document_type: inv.doc_type || "invoice",
           status: "complete",
           file_url: inv.file_url || null,
           amount: inv.amount ? Number(inv.amount) : null,

@@ -45,7 +45,7 @@ export default function VendorChecklist({ drawId }) {
     .filter((d) => dvIds.has(d.draw_vendor_id))
     .reduce((acc, doc) => {
       if (!acc[doc.draw_vendor_id]) acc[doc.draw_vendor_id] = { invoices: [] };
-      if (doc.document_type === "invoice") {
+      if (doc.document_type === "invoice" || doc.document_type === "receipt") {
         acc[doc.draw_vendor_id].invoices.push(doc);
       } else {
         acc[doc.draw_vendor_id][doc.document_type] = doc;
@@ -114,7 +114,7 @@ export default function VendorChecklist({ drawId }) {
                   <th className="px-2 py-2 font-semibold">Vendor</th>
                   <th className="px-2 py-2 font-semibold">Scope</th>
                   <th className="px-2 py-2 font-semibold text-right">Amount</th>
-                  <th className="px-2 py-2 font-semibold">Invoice</th>
+                  <th className="px-2 py-2 font-semibold">Invoice / Receipt</th>
                   <th className="px-2 py-2 font-semibold">Conditional Release</th>
                   <th className="px-2 py-2 font-semibold">Unconditional Release</th>
                   <th className="px-2 py-2 font-semibold">Status</th>

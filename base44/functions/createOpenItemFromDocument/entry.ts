@@ -2,6 +2,7 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.38';
 
 const DOC_LABELS = {
   invoice: "Invoice",
+  receipt: "Receipt",
   conditional_lien_release: "Conditional lien release",
   unconditional_lien_release: "Unconditional lien release",
 };

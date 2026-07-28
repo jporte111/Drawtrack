@@ -65,7 +65,7 @@ export default function AddVendorDialog({ open, onOpenChange, drawId, clientId }
   const totalAmount = invoices.reduce((sum, inv) => sum + (parseFloat(inv.amount) || 0), 0);
 
   const handleAddInvoice = () => {
-    setInvoices((prev) => [...prev, { file_url: "", filename: "", amount: "", uploading: false, error: "" }]);
+    setInvoices((prev) => [...prev, { file_url: "", filename: "", amount: "", uploading: false, error: "", doc_type: "invoice" }]);
   };
 
   const handleInvoiceChange = (index, updated) => {
@@ -126,7 +126,7 @@ export default function AddVendorDialog({ open, onOpenChange, drawId, clientId }
       for (const inv of uploadedInvoices) {
         docsToCreate.push({
           draw_vendor_id: dv.id,
-          document_type: "invoice",
+          document_type: inv.doc_type || "invoice",
           status: "complete",
           file_url: inv.file_url,
           amount: inv.amount ? Number(inv.amount) : null,

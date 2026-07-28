@@ -21,6 +21,8 @@ export default function InvoiceStatusCell({ invoices, drawId }) {
 
   const completeCount = invoices.filter((d) => d.status === "complete" || d.status === "na").length;
   const total = invoices.reduce((sum, d) => sum + (d.amount || 0), 0);
+  const hasReceipt = invoices.some((d) => d.document_type === "receipt");
+  const label = hasReceipt && invoices.every((d) => d.document_type === "receipt") ? "receipts" : "invoices";
 
   return (
     <>
@@ -29,19 +31,19 @@ export default function InvoiceStatusCell({ invoices, drawId }) {
         onClick={() => setOpen(true)}
         className="inline-flex items-center gap-1.5 h-7 px-2 rounded-md border border-input bg-transparent text-xs hover:bg-accent transition-colors w-full justify-between"
       >
-        <span>{invoices.length} invoices</span>
+        <span>{invoices.length} {label}</span>
         <span className="text-slate-400">{completeCount}/{invoices.length}</span>
       </button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Invoices ({formatCurrency(total)})</DialogTitle>
+            <DialogTitle>{label.charAt(0).toUpperCase() + label.slice(1)} ({formatCurrency(total)})</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
             {invoices.map((inv, i) => (
               <div key={inv.id} className="flex items-center gap-2">
                 <FileText className="w-4 h-4 text-slate-400 shrink-0" />
-                <span className="text-xs text-slate-600 shrink-0 w-20">Invoice {i + 1}</span>
+                <span className="text-xs text-slate-600 shrink-0 w-20 capitalize">{inv.document_type || "invoice"} {i + 1}</span>
                 {inv.amount != null && <span className="text-xs text-slate-500 shrink-0">{formatCurrency(inv.amount)}</span>}
                 <div className="flex-1 min-w-0"><DocumentStatusCell doc={inv} drawId={drawId} /></div>
                 <Button
