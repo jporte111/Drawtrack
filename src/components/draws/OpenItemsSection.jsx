@@ -9,6 +9,7 @@ import { formatDate, formatCurrency } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import OpenItemFormDialog from "./OpenItemFormDialog";
 import OpenItemDetailDialog from "./OpenItemDetailDialog";
+import EditableAmount from "./EditableAmount";
 
 const PRIORITY_ORDER = { critical: 0, high: 1, medium: 2, low: 3 };
 
@@ -182,10 +183,17 @@ export default function OpenItemsSection({ drawId }) {
                           <div className="flex-1 min-w-0">
                             <div className="text-sm text-slate-900 truncate">{item.title}</div>
                           </div>
-                          {doc?.amount != null && (
-                            <span className="text-xs font-medium text-slate-600 shrink-0">
-                              {formatCurrency(doc.amount)}
-                            </span>
+                          {doc && (
+                            <div className="shrink-0">
+                              <EditableAmount
+                                amount={doc.amount}
+                                className="text-xs text-slate-600"
+                                onSave={async (newAmount) => {
+                                  await base44.entities.Document.update(doc.id, { amount: newAmount });
+                                  queryClient.invalidateQueries({ queryKey: ["documents"] });
+                                }}
+                              />
+                            </div>
                           )}
                           {item.assigned_to && (
                             <span className="text-xs text-slate-500 hidden sm:block">{item.assigned_to}</span>
