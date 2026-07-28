@@ -4,7 +4,7 @@ import { base44 } from "@/api/base44Client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { statusConfig } from "@/lib/statusConfig";
 
-const DOC_STATUSES = ["missing", "pending_signature", "needs_correction", "complete", "na"];
+const DOC_STATUSES = ["missing", "pending_signature", "needs_correction", "pending_payment", "complete", "na"];
 
 export default function DocumentStatusCell({ doc, drawId }) {
   const queryClient = useQueryClient();

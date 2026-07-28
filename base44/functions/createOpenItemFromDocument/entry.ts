@@ -10,6 +10,7 @@ const STATUS_LABELS = {
   missing: "Missing",
   pending_signature: "Pending signature",
   needs_correction: "Needs correction",
+  pending_payment: "Pending payment",
 };
 
 Deno.serve(async (req) => {

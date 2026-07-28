@@ -19,6 +19,7 @@
         "missing",
         "pending_signature",
         "needs_correction",
+        "pending_payment",
         "complete",
         "na"
       ],

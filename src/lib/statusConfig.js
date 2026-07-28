@@ -18,6 +18,7 @@ export const statusConfig = {
   missing: { label: "Missing", className: "bg-red-100 text-red-700" },
   pending_signature: { label: "Pending Signature", className: "bg-amber-100 text-amber-700" },
   needs_correction: { label: "Needs Correction", className: "bg-orange-100 text-orange-700" },
+  pending_payment: { label: "Pending Payment", className: "bg-indigo-100 text-indigo-700" },
   approved: { label: "Approved", className: "bg-emerald-100 text-emerald-700" },
   na: { label: "N/A", className: "bg-slate-200 text-slate-500" },
   // Open Item
