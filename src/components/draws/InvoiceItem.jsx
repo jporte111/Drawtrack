@@ -82,7 +82,7 @@ export default function InvoiceItem({ invoice, onChange, onRemove, onExtracted }
           value={invoice.amount}
           onChange={(e) => update({ amount: e.target.value })}
           placeholder="0.00"
-          className="h-8"
+          className="h-8 w-40"
         />
       </div>
     </div>
