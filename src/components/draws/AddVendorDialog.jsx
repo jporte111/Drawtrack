@@ -17,6 +17,9 @@ export default function AddVendorDialog({ open, onOpenChange, drawId, clientId }
   const [form, setForm] = useState({ vendor_id: "", scope_of_work: "", notes: "" });
   const [invoices, setInvoices] = useState([]);
   const [extracted, setExtracted] = useState(false);
+  const [showNewVendor, setShowNewVendor] = useState(false);
+  const [newVendorName, setNewVendorName] = useState("");
+  const [creatingVendor, setCreatingVendor] = useState(false);
 
   const { data: vendors = [] } = useQuery({
     queryKey: ["vendors"],
@@ -35,8 +38,29 @@ export default function AddVendorDialog({ open, onOpenChange, drawId, clientId }
       setForm({ vendor_id: "", scope_of_work: "", notes: "" });
       setInvoices([]);
       setExtracted(false);
+      setShowNewVendor(false);
+      setNewVendorName("");
     }
   }, [open]);
+
+  const handleCreateVendor = async () => {
+    if (!newVendorName.trim()) return;
+    setCreatingVendor(true);
+    try {
+      const newVendor = await base44.entities.Vendor.create({
+        name: newVendorName.trim(),
+        vendor_type: "other",
+        status: "active",
+        client_id: clientId,
+      });
+      queryClient.setQueryData(["vendors"], (old = []) => [...old, newVendor]);
+      setForm((f) => ({ ...f, vendor_id: newVendor.id }));
+      setShowNewVendor(false);
+      setNewVendorName("");
+    } finally {
+      setCreatingVendor(false);
+    }
+  };
 
   const totalAmount = invoices.reduce((sum, inv) => sum + (parseFloat(inv.amount) || 0), 0);
 
@@ -160,14 +184,36 @@ export default function AddVendorDialog({ open, onOpenChange, drawId, clientId }
           )}
           <div className="space-y-1.5">
             <Label>Vendor</Label>
-            <Select value={form.vendor_id} onValueChange={(v) => setForm({ ...form, vendor_id: v })}>
-              <SelectTrigger><SelectValue placeholder="Select vendor" /></SelectTrigger>
-              <SelectContent>
-                {availableVendors.map((v) => <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            {availableVendors.length === 0 && (
-              <p className="text-xs text-amber-600">All vendors are already linked to this draw.</p>
+            {showNewVendor ? (
+              <div className="flex gap-2">
+                <Input
+                  value={newVendorName}
+                  onChange={(e) => setNewVendorName(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleCreateVendor(); } }}
+                  placeholder="New vendor name"
+                  autoFocus
+                />
+                <Button type="button" size="sm" onClick={handleCreateVendor} disabled={creatingVendor || !newVendorName.trim()}>
+                  {creatingVendor ? "..." : "Add"}
+                </Button>
+                <Button type="button" size="sm" variant="ghost" onClick={() => { setShowNewVendor(false); setNewVendorName(""); }}>Cancel</Button>
+              </div>
+            ) : (
+              <div className="flex gap-2">
+                <Select value={form.vendor_id} onValueChange={(v) => {
+                  if (v === "__new__") { setShowNewVendor(true); setForm((f) => ({ ...f, vendor_id: "" })); }
+                  else setForm({ ...form, vendor_id: v });
+                }}>
+                  <SelectTrigger><SelectValue placeholder="Select vendor" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__new__" className="font-medium text-primary">+ Add New Vendor</SelectItem>
+                    {availableVendors.map((v) => <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            {availableVendors.length === 0 && !showNewVendor && (
+              <p className="text-xs text-amber-600">No available vendors — add a new one above.</p>
             )}
           </div>
           <div className="space-y-1.5">
