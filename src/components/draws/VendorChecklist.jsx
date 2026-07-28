@@ -1,10 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Plus, Trash2, FileText, StickyNote, Pencil } from "lucide-react";
+import { Plus, Trash2, FileText, StickyNote } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
 import AddVendorDialog from "./AddVendorDialog";
 import AddInvoiceDialog from "./AddInvoiceDialog";
@@ -13,49 +13,6 @@ import DocumentStatusCell from "./DocumentStatusCell";
 import GenerateLienReleasesDialog from "./GenerateLienReleasesDialog";
 
 const DV_STATUSES = ["pending", "documents_requested", "documents_received", "under_review", "complete"];
-
-function EditableAmount({ dvId, amount, onSave }) {
-  const [editing, setEditing] = useState(false);
-  const [value, setValue] = useState(amount != null ? String(amount) : "");
-
-  if (editing) {
-    return (
-      <input
-        autoFocus
-        type="number"
-        step="0.01"
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-        onBlur={() => {
-          setEditing(false);
-          onSave(parseFloat(value) || 0);
-        }}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") {
-            setEditing(false);
-            onSave(parseFloat(value) || 0);
-          }
-          if (e.key === "Escape") {
-            setEditing(false);
-            setValue(amount != null ? String(amount) : "");
-          }
-        }}
-        className="h-7 w-28 rounded border border-input bg-transparent px-2 text-sm text-right focus:outline-none focus:ring-1 focus:ring-ring"
-      />
-    );
-  }
-
-  return (
-    <button
-      onClick={() => setEditing(true)}
-      className="inline-flex items-center gap-1 text-right font-medium rounded px-1.5 py-0.5 hover:underline hover:decoration-dotted cursor-text"
-      title="Click to edit amount"
-    >
-      {formatCurrency(amount)}
-      <Pencil className="w-3 h-3 text-slate-400 opacity-0 group-hover:opacity-100" />
-    </button>
-  );
-}
 
 export default function VendorChecklist({ drawId }) {
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -96,13 +53,24 @@ export default function VendorChecklist({ drawId }) {
       return acc;
     }, {});
 
+  const invoiceTotalByDV = drawVendors.reduce((acc, dv) => {
+    const invoices = docsByDV[dv.id]?.invoices || [];
+    acc[dv.id] = invoices.reduce((sum, inv) => sum + (inv.amount || 0), 0);
+    return acc;
+  }, {});
+
+  // Auto-sync DrawVendor amount to match invoice total
+  useEffect(() => {
+    drawVendors.forEach((dv) => {
+      const computed = invoiceTotalByDV[dv.id];
+      if (computed != null && dv.amount !== computed) {
+        base44.entities.DrawVendor.update(dv.id, { amount: computed });
+      }
+    });
+  }, [invoiceTotalByDV]);
+
   const handleDVStatusChange = async (dvId, status) => {
     await base44.entities.DrawVendor.update(dvId, { status });
-    queryClient.invalidateQueries({ queryKey: ["drawVendors", drawId] });
-  };
-
-  const handleAmountChange = async (dvId, newAmount) => {
-    await base44.entities.DrawVendor.update(dvId, { amount: newAmount });
     queryClient.invalidateQueries({ queryKey: ["drawVendors", drawId] });
   };
 
@@ -176,8 +144,8 @@ export default function VendorChecklist({ drawId }) {
                         )}
                       </td>
                       <td className="px-2 py-2.5 text-slate-600 max-w-[140px] truncate">{dv.scope_of_work || "—"}</td>
-                      <td className="px-2 py-2.5 text-right group">
-                        <EditableAmount dvId={dv.id} amount={dv.amount} onSave={(amt) => handleAmountChange(dv.id, amt)} />
+                      <td className="px-2 py-2.5 text-right font-medium">
+                        {formatCurrency(invoiceTotalByDV[dv.id] || 0)}
                       </td>
                       <td className="px-2 py-2"><InvoiceStatusCell invoices={docs.invoices} drawId={drawId} /></td>
                       <td className="px-2 py-2"><DocumentStatusCell doc={docs.conditional_lien_release} drawId={drawId} /></td>
@@ -195,7 +163,7 @@ export default function VendorChecklist({ drawId }) {
                           <Button size="icon" variant="ghost" className="h-7 w-7 text-slate-400 hover:text-slate-700" onClick={() => openAddInvoice(dv.id)} title="Add invoices">
                             <Plus className="w-3.5 h-3.5" />
                           </Button>
-                          <Button size="icon" variant="ghost" className="h-7 w-7 text-slate-400 hover:text-slate-700" onClick={() => openGenerateDialog(vendor?.name || "Unknown", dv.amount)} title="Generate lien release forms">
+                          <Button size="icon" variant="ghost" className="h-7 w-7 text-slate-400 hover:text-slate-700" onClick={() => openGenerateDialog(vendor?.name || "Unknown", invoiceTotalByDV[dv.id] || 0)} title="Generate lien release forms">
                             <FileText className="w-3.5 h-3.5" />
                           </Button>
                           <Button size="icon" variant="ghost" className="h-7 w-7 text-slate-400 hover:text-red-600" onClick={() => handleRemoveVendor(dv.id)}>
@@ -236,7 +204,7 @@ export default function VendorChecklist({ drawId }) {
                       )}
                     </div>
                     <div className="font-medium text-sm shrink-0">
-                      <EditableAmount dvId={dv.id} amount={dv.amount} onSave={(amt) => handleAmountChange(dv.id, amt)} />
+                      {formatCurrency(invoiceTotalByDV[dv.id] || 0)}
                     </div>
                   </div>
                   <div className="grid grid-cols-1 gap-2">
@@ -264,7 +232,7 @@ export default function VendorChecklist({ drawId }) {
                       <Button size="icon" variant="ghost" className="h-8 w-8 text-slate-400 hover:text-slate-700" onClick={() => openAddInvoice(dv.id)} title="Add invoices">
                         <Plus className="w-4 h-4" />
                       </Button>
-                      <Button size="icon" variant="ghost" className="h-8 w-8 text-slate-400 hover:text-slate-700" onClick={() => openGenerateDialog(vendor?.name || "Unknown", dv.amount)} title="Generate lien release forms">
+                      <Button size="icon" variant="ghost" className="h-8 w-8 text-slate-400 hover:text-slate-700" onClick={() => openGenerateDialog(vendor?.name || "Unknown", invoiceTotalByDV[dv.id] || 0)} title="Generate lien release forms">
                         <FileText className="w-4 h-4" />
                       </Button>
                       <Button size="icon" variant="ghost" className="h-8 w-8 text-slate-400 hover:text-red-600" onClick={() => handleRemoveVendor(dv.id)}>
