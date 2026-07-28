@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import OpenItemFormDialog from "./OpenItemFormDialog";
 import OpenItemDetailDialog from "./OpenItemDetailDialog";
 import EditableAmount from "./EditableAmount";
+import { Trash2 } from "lucide-react";
 
 const PRIORITY_ORDER = { critical: 0, high: 1, medium: 2, low: 3 };
 
@@ -203,6 +204,20 @@ export default function OpenItemsSection({ drawId }) {
                               Due {formatDate(item.due_date)}
                             </span>
                           )}
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-7 w-7 text-slate-400 hover:text-red-600 shrink-0"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              base44.entities.OpenItem.delete(item.id).then(() => {
+                                queryClient.invalidateQueries({ queryKey: ["openItems", drawId] });
+                              });
+                            }}
+                            title="Delete item"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </Button>
                         </div>
                       );
                     })}
