@@ -49,7 +49,11 @@ export default function InvoiceStatusCell({ invoices, drawId }) {
                   variant="ghost"
                   className="h-7 w-7 text-slate-400 hover:text-red-600 shrink-0"
                   onClick={async () => {
-                    await base44.entities.Document.delete(inv.id);
+                    try {
+                      await base44.entities.Document.delete(inv.id);
+                    } catch (_e) {
+                      // Document may have already been deleted — refresh anyway
+                    }
                     queryClient.invalidateQueries({ queryKey: ["documents"] });
                     queryClient.invalidateQueries({ queryKey: ["openItems", drawId] });
                   }}
