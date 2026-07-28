@@ -38,12 +38,12 @@ export default function AddInvoiceDialog({ open, onOpenChange, drawVendorId, dra
     setSaving(true);
     try {
       const docsToCreate = invoices
-        .filter((inv) => inv.file_url)
+        .filter((inv) => inv.file_url || inv.amount)
         .map((inv) => ({
           draw_vendor_id: drawVendorId,
           document_type: "invoice",
           status: "complete",
-          file_url: inv.file_url,
+          file_url: inv.file_url || null,
           amount: inv.amount ? Number(inv.amount) : null,
           received_date: new Date().toISOString().split("T")[0],
         }));
@@ -84,7 +84,7 @@ export default function AddInvoiceDialog({ open, onOpenChange, drawVendorId, dra
           )}
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-            <Button type="submit" disabled={saving || invoices.filter((i) => i.file_url).length === 0}>
+            <Button type="submit" disabled={saving || invoices.filter((i) => i.file_url || i.amount).length === 0}>
               {saving ? "Adding..." : "Add Invoices"}
             </Button>
           </DialogFooter>
