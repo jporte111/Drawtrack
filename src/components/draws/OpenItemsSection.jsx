@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 import OpenItemFormDialog from "./OpenItemFormDialog";
 import OpenItemDetailDialog from "./OpenItemDetailDialog";
 import EditableAmount from "./EditableAmount";
-import { Trash2 } from "lucide-react";
+import { Trash2, ExternalLink } from "lucide-react";
 
 const PRIORITY_ORDER = { critical: 0, high: 1, medium: 2, low: 3 };
 
@@ -195,6 +195,20 @@ export default function OpenItemsSection({ drawId }) {
                                 }}
                               />
                             </div>
+                          )}
+                          {doc?.file_url && (
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-7 w-7 text-slate-400 hover:text-slate-700 shrink-0"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                window.open(doc.file_url, "_blank", "noopener,noreferrer");
+                              }}
+                              title="View invoice"
+                            >
+                              <ExternalLink className="w-3.5 h-3.5" />
+                            </Button>
                           )}
                           {item.assigned_to && (
                             <span className="text-xs text-slate-500 hidden sm:block">{item.assigned_to}</span>
