@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Plus, ChevronDown, ChevronRight } from "lucide-react";
 import StatusBadge from "@/components/StatusBadge";
 import { priorityConfig, openItemDocTypeConfig } from "@/lib/statusConfig";
-import { formatDate } from "@/lib/format";
+import { formatDate, formatCurrency } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import OpenItemFormDialog from "./OpenItemFormDialog";
 import OpenItemDetailDialog from "./OpenItemDetailDialog";
@@ -49,8 +49,8 @@ export default function OpenItemsSection({ drawId }) {
     return new Map(drawVendors.map((dv) => [dv.id, vendorMap.get(dv.vendor_id) || "Unknown"]));
   }, [drawVendors, vendors]);
 
-  const docTypeById = useMemo(() => {
-    return new Map(allDocs.map((d) => [d.id, d.document_type]));
+  const docById = useMemo(() => {
+    return new Map(allDocs.map((d) => [d.id, d]));
   }, [allDocs]);
 
   const unresolved = items.filter((i) => i.status === "open" || i.status === "in_progress");
@@ -95,8 +95,8 @@ export default function OpenItemsSection({ drawId }) {
   const getOutstandingDocTypes = (groupItems) => {
     const types = new Set();
     for (const item of groupItems) {
-      const docType = item.document_id ? docTypeById.get(item.document_id) : null;
-      if (docType) types.add(docType);
+      const doc = item.document_id ? docById.get(item.document_id) : null;
+      if (doc?.document_type) types.add(doc.document_type);
     }
     return [...types];
   };
@@ -166,7 +166,8 @@ export default function OpenItemsSection({ drawId }) {
                 {isExpanded && (
                   <div className="divide-y divide-slate-100">
                     {groupItems.map((item) => {
-                      const docType = item.document_id ? docTypeById.get(item.document_id) : null;
+                      const doc = item.document_id ? docById.get(item.document_id) : null;
+                      const docType = doc?.document_type || null;
                       const docTypeCfg = docType ? openItemDocTypeConfig[docType] : null;
                       return (
                         <div
@@ -181,6 +182,11 @@ export default function OpenItemsSection({ drawId }) {
                           <div className="flex-1 min-w-0">
                             <div className="text-sm text-slate-900 truncate">{item.title}</div>
                           </div>
+                          {doc?.amount != null && (
+                            <span className="text-xs font-medium text-slate-600 shrink-0">
+                              {formatCurrency(doc.amount)}
+                            </span>
+                          )}
                           {item.assigned_to && (
                             <span className="text-xs text-slate-500 hidden sm:block">{item.assigned_to}</span>
                           )}

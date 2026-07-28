@@ -24,7 +24,23 @@ Deno.serve(async (req) => {
 
     const docLabel = DOC_LABELS[document_type] || "Document";
     const statusLabel = STATUS_LABELS[status] || "Unresolved";
-    const title = `${statusLabel}: ${docLabel}`;
+
+    // Fetch the document to get the amount for a more descriptive title
+    let amountLabel = "";
+    try {
+      const doc = await base44.asServiceRole.entities.Document.get(document_id);
+      if (doc && doc.amount != null) {
+        const formatted = new Intl.NumberFormat("en-US", {
+          style: "currency",
+          currency: "USD",
+        }).format(doc.amount);
+        amountLabel = ` — ${formatted}`;
+      }
+    } catch (_e) {
+      // If document fetch fails, continue without the amount
+    }
+
+    const title = `${statusLabel}: ${docLabel}${amountLabel}`;
 
     // Look up the DrawVendor to get the draw_cycle_id
     const drawVendor = await base44.asServiceRole.entities.DrawVendor.get(draw_vendor_id);
