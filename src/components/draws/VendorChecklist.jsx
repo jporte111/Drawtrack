@@ -7,6 +7,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Plus, Trash2, FileText, StickyNote, Pencil } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
 import AddVendorDialog from "./AddVendorDialog";
+import AddInvoiceDialog from "./AddInvoiceDialog";
 import InvoiceStatusCell from "./InvoiceStatusCell";
 import DocumentStatusCell from "./DocumentStatusCell";
 import GenerateLienReleasesDialog from "./GenerateLienReleasesDialog";
@@ -60,6 +61,8 @@ export default function VendorChecklist({ drawId }) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [genDialogOpen, setGenDialogOpen] = useState(false);
   const [genVendor, setGenVendor] = useState({ name: "", amount: null });
+  const [addInvoiceOpen, setAddInvoiceOpen] = useState(false);
+  const [addInvoiceDVId, setAddInvoiceDVId] = useState(null);
   const queryClient = useQueryClient();
 
   const { data: drawVendors = [] } = useQuery({
@@ -115,6 +118,11 @@ export default function VendorChecklist({ drawId }) {
   const openGenerateDialog = (vendorName, amount) => {
     setGenVendor({ name: vendorName, amount });
     setGenDialogOpen(true);
+  };
+
+  const openAddInvoice = (dvId) => {
+    setAddInvoiceDVId(dvId);
+    setAddInvoiceOpen(true);
   };
 
   return (
@@ -184,6 +192,9 @@ export default function VendorChecklist({ drawId }) {
                       </td>
                       <td className="px-2 py-2">
                         <div className="flex items-center gap-1">
+                          <Button size="icon" variant="ghost" className="h-7 w-7 text-slate-400 hover:text-slate-700" onClick={() => openAddInvoice(dv.id)} title="Add invoices">
+                            <Plus className="w-3.5 h-3.5" />
+                          </Button>
                           <Button size="icon" variant="ghost" className="h-7 w-7 text-slate-400 hover:text-slate-700" onClick={() => openGenerateDialog(vendor?.name || "Unknown", dv.amount)} title="Generate lien release forms">
                             <FileText className="w-3.5 h-3.5" />
                           </Button>
@@ -250,6 +261,9 @@ export default function VendorChecklist({ drawId }) {
                       </SelectContent>
                     </Select>
                     <div className="flex items-center gap-1 shrink-0">
+                      <Button size="icon" variant="ghost" className="h-8 w-8 text-slate-400 hover:text-slate-700" onClick={() => openAddInvoice(dv.id)} title="Add invoices">
+                        <Plus className="w-4 h-4" />
+                      </Button>
                       <Button size="icon" variant="ghost" className="h-8 w-8 text-slate-400 hover:text-slate-700" onClick={() => openGenerateDialog(vendor?.name || "Unknown", dv.amount)} title="Generate lien release forms">
                         <FileText className="w-4 h-4" />
                       </Button>
@@ -265,6 +279,7 @@ export default function VendorChecklist({ drawId }) {
         </>
       )}
       <AddVendorDialog open={dialogOpen} onOpenChange={setDialogOpen} drawId={drawId} clientId={drawCycle?.client_id} />
+      <AddInvoiceDialog open={addInvoiceOpen} onOpenChange={setAddInvoiceOpen} drawVendorId={addInvoiceDVId} drawId={drawId} />
       <GenerateLienReleasesDialog
         open={genDialogOpen}
         onOpenChange={setGenDialogOpen}
