@@ -8,9 +8,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 const EXTRACTION_SCHEMA = {
   type: "object",
   properties: {
-    vendor_name: { type: "string", description: "Name of the vendor/company issuing the invoice" },
-    amount: { type: "number", description: "Total invoice amount in dollars" },
-    scope_of_work: { type: "string", description: "Description of work or services provided" },
+    vendor_name: { type: "string", description: "Name of the vendor/company that issued this invoice or receipt" },
+    amount: { type: "number", description: "Total amount in dollars" },
+    scope_of_work: { type: "string", description: "Description of work, services, or items provided" },
     contact_name: { type: "string", description: "Contact person name if available" },
     email: { type: "string", description: "Vendor email if available" },
     phone: { type: "string", description: "Vendor phone if available" },
@@ -45,7 +45,8 @@ export default function InvoiceItem({ invoice, onChange, onRemove, onExtracted }
         });
         if (onExtracted) onExtracted(result.output);
       } else {
-        update({ uploading: false, error: "Could not extract data from this file.", file_url });
+        update({ uploading: false, file_url, filename: file.name });
+        if (onExtracted) onExtracted({});
       }
     } catch (err) {
       update({ uploading: false, error: err.message || "Failed to process invoice." });
@@ -66,7 +67,7 @@ export default function InvoiceItem({ invoice, onChange, onRemove, onExtracted }
           </span>
         ) : (
           <Button type="button" variant="outline" size="sm" onClick={() => inputRef.current?.click()} className="flex-1">
-            <Upload className="w-3.5 h-3.5 mr-1.5" />Upload Invoice
+            <Upload className="w-3.5 h-3.5 mr-1.5" />Upload {(invoice.doc_type || "invoice").charAt(0).toUpperCase() + (invoice.doc_type || "invoice").slice(1)}
           </Button>
         )}
         <input ref={inputRef} type="file" accept=".pdf,.png,.jpg,.jpeg" className="hidden" onChange={handleFile} />

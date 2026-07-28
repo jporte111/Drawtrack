@@ -77,6 +77,10 @@ export default function AddVendorDialog({ open, onOpenChange, drawId, clientId }
   };
 
   const handleFirstInvoiceExtracted = async (data) => {
+    if (!data || Object.keys(data).length === 0) {
+      setExtracted(true);
+      return;
+    }
     setExtracted(true);
     setForm((f) => ({
       ...f,
