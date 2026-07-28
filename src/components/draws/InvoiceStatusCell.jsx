@@ -1,12 +1,15 @@
 import React, { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { FileText } from "lucide-react";
+import { FileText, Trash2 } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
+import { base44 } from "@/api/base44Client";
+import { useQueryClient } from "@tanstack/react-query";
 import DocumentStatusCell from "./DocumentStatusCell";
 
 export default function InvoiceStatusCell({ invoices, drawId }) {
   const [open, setOpen] = useState(false);
+  const queryClient = useQueryClient();
 
   if (!invoices || invoices.length === 0) {
     return <span className="text-xs text-slate-300">—</span>;
@@ -41,6 +44,19 @@ export default function InvoiceStatusCell({ invoices, drawId }) {
                 <span className="text-xs text-slate-600 shrink-0 w-20">Invoice {i + 1}</span>
                 {inv.amount != null && <span className="text-xs text-slate-500 shrink-0">{formatCurrency(inv.amount)}</span>}
                 <div className="flex-1 min-w-0"><DocumentStatusCell doc={inv} drawId={drawId} /></div>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-7 w-7 text-slate-400 hover:text-red-600 shrink-0"
+                  onClick={async () => {
+                    await base44.entities.Document.delete(inv.id);
+                    queryClient.invalidateQueries({ queryKey: ["documents"] });
+                    queryClient.invalidateQueries({ queryKey: ["openItems", drawId] });
+                  }}
+                  title="Delete invoice"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </Button>
               </div>
             ))}
           </div>
