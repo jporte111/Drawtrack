@@ -11,8 +11,6 @@ import AddInvoiceDialog from "./AddInvoiceDialog";
 import InvoiceStatusCell from "./InvoiceStatusCell";
 import DocumentStatusCell from "./DocumentStatusCell";
 import GenerateLienReleasesDialog from "./GenerateLienReleasesDialog";
-import VendorLineItems from "./VendorLineItems";
-
 const DV_STATUSES = ["pending", "documents_requested", "documents_received", "under_review", "complete"];
 
 export default function VendorChecklist({ drawId }) {
@@ -126,7 +124,6 @@ export default function VendorChecklist({ drawId }) {
                 {drawVendors.map((dv) => {
                   const vendor = vendorMap.get(dv.vendor_id);
                   const docs = docsByDV[dv.id] || {};
-                  const hasInvoices = docs.invoices && docs.invoices.length > 0;
                   return (
                     <React.Fragment key={dv.id}>
                       <tr className="border-b last:border-0 hover:bg-slate-50">
@@ -192,13 +189,6 @@ export default function VendorChecklist({ drawId }) {
                           </div>
                         </td>
                       </tr>
-                      {hasInvoices && (
-                        <tr className="bg-slate-50/50">
-                          <td colSpan={8} className="px-4 py-2">
-                            <VendorLineItems invoices={docs.invoices} drawId={drawId} />
-                          </td>
-                        </tr>
-                      )}
                     </React.Fragment>
                   );
                 })}
@@ -285,12 +275,6 @@ export default function VendorChecklist({ drawId }) {
                       </Button>
                     </div>
                   </div>
-                  {docs.invoices && docs.invoices.length > 0 && (
-                    <div className="pt-1 border-t">
-                      <div className="text-xs text-slate-500 mb-1">Line Items</div>
-                      <VendorLineItems invoices={docs.invoices} drawId={drawId} />
-                    </div>
-                  )}
                 </div>
               );
             })}
