@@ -4,7 +4,7 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Plus, Trash2, FileText, StickyNote } from "lucide-react";
+import { Plus, Trash2, FileText, StickyNote, ExternalLink } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
 import AddVendorDialog from "./AddVendorDialog";
 import AddInvoiceDialog from "./AddInvoiceDialog";
@@ -130,8 +130,25 @@ export default function VendorChecklist({ drawId }) {
                   return (
                     <React.Fragment key={dv.id}>
                       <tr className="border-b last:border-0 hover:bg-slate-50">
-                        <td className="px-2 py-2.5 font-medium text-slate-900">
+                        <td className="px-2 py-2.5 font-medium text-slate-900 align-top">
                           {vendor?.name || "Unknown"}
+                          {docs.invoices && docs.invoices.length > 0 && (
+                            <div className="flex flex-col gap-0.5 mt-1">
+                              {docs.invoices.map((inv, i) => (
+                                <a
+                                  key={inv.id}
+                                  href={inv.file_url || "#"}
+                                  target={inv.file_url ? "_blank" : undefined}
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1 text-xs text-slate-400 hover:text-slate-700 max-w-[180px] truncate"
+                                  title={inv.file_url ? "View file" : "No file uploaded"}
+                                >
+                                  <ExternalLink className="w-3 h-3 shrink-0" />
+                                  <span className="truncate">{inv.notes || `${inv.document_type === "receipt" ? "Receipt" : "Inv"} ${i + 1}`}</span>
+                                </a>
+                              ))}
+                            </div>
+                          )}
                           {dv.notes && (
                             <Popover>
                               <PopoverTrigger asChild>
@@ -146,7 +163,7 @@ export default function VendorChecklist({ drawId }) {
                             </Popover>
                           )}
                         </td>
-                        <td className="px-2 py-2.5 text-slate-600 max-w-[140px] truncate">{dv.scope_of_work || "—"}</td>
+                        <td className="px-2 py-2.5 text-slate-600 max-w-[140px] truncate align-top">{dv.scope_of_work || "—"}</td>
                         <td className="px-2 py-2.5 text-right font-medium">
                           {formatCurrency(invoiceTotalByDV[dv.id] || 0)}
                         </td>
@@ -200,6 +217,23 @@ export default function VendorChecklist({ drawId }) {
                     <div className="min-w-0">
                       <div className="font-medium text-slate-900 truncate">{vendor?.name || "Unknown"}</div>
                       <div className="text-xs text-slate-500 truncate">{dv.scope_of_work || "—"}</div>
+                      {docs.invoices && docs.invoices.length > 0 && (
+                        <div className="flex flex-col gap-0.5 mt-1">
+                          {docs.invoices.map((inv, i) => (
+                            <a
+                              key={inv.id}
+                              href={inv.file_url || "#"}
+                              target={inv.file_url ? "_blank" : undefined}
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 text-xs text-slate-400 hover:text-slate-700 max-w-[180px] truncate"
+                              title={inv.file_url ? "View file" : "No file uploaded"}
+                            >
+                              <ExternalLink className="w-3 h-3 shrink-0" />
+                              <span className="truncate">{inv.notes || `${inv.document_type === "receipt" ? "Receipt" : "Inv"} ${i + 1}`}</span>
+                            </a>
+                          ))}
+                        </div>
+                      )}
                       {dv.notes && (
                         <Popover>
                           <PopoverTrigger asChild>

@@ -1,5 +1,5 @@
 import React from "react";
-import { FileText, Trash2, ExternalLink } from "lucide-react";
+import { FileText, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/format";
 import { base44 } from "@/api/base44Client";
@@ -35,11 +35,6 @@ export default function VendorLineItems({ invoices, drawId }) {
             </span>
             {inv.amount != null && (
               <span className="text-xs font-medium text-slate-700 shrink-0">{formatCurrency(inv.amount)}</span>
-            )}
-            {inv.file_url && (
-              <a href={inv.file_url} target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-slate-700 shrink-0" title="View file">
-                <ExternalLink className="w-3.5 h-3.5" />
-              </a>
             )}
             {inv.notes && <span className="text-xs text-slate-400 truncate flex-1">{inv.notes}</span>}
             <div className="flex-1 min-w-0 max-w-[180px] ml-auto">
