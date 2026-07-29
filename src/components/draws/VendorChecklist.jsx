@@ -4,7 +4,7 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Plus, Trash2, FileText, StickyNote, ChevronDown, ChevronRight } from "lucide-react";
+import { Plus, Trash2, FileText, StickyNote } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
 import AddVendorDialog from "./AddVendorDialog";
 import AddInvoiceDialog from "./AddInvoiceDialog";
@@ -21,7 +21,6 @@ export default function VendorChecklist({ drawId }) {
   const [genVendor, setGenVendor] = useState({ name: "", amount: null });
   const [addInvoiceOpen, setAddInvoiceOpen] = useState(false);
   const [addInvoiceDVId, setAddInvoiceDVId] = useState(null);
-  const [expandedDV, setExpandedDV] = useState(null);
   const queryClient = useQueryClient();
 
   const { data: drawVendors = [] } = useQuery({
@@ -127,7 +126,6 @@ export default function VendorChecklist({ drawId }) {
                 {drawVendors.map((dv) => {
                   const vendor = vendorMap.get(dv.vendor_id);
                   const docs = docsByDV[dv.id] || {};
-                  const expanded = expandedDV === dv.id;
                   const hasInvoices = docs.invoices && docs.invoices.length > 0;
                   return (
                     <React.Fragment key={dv.id}>
@@ -174,15 +172,10 @@ export default function VendorChecklist({ drawId }) {
                             <Button size="icon" variant="ghost" className="h-7 w-7 text-slate-400 hover:text-red-600" onClick={() => handleRemoveVendor(dv.id)}>
                               <Trash2 className="w-3.5 h-3.5" />
                             </Button>
-                            {hasInvoices && (
-                              <Button size="icon" variant="ghost" className="h-7 w-7 text-slate-400 hover:text-slate-700" onClick={() => setExpandedDV(expanded ? null : dv.id)} title="Toggle line items">
-                                {expanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
-                              </Button>
-                            )}
                           </div>
                         </td>
                       </tr>
-                      {expanded && hasInvoices && (
+                      {hasInvoices && (
                         <tr className="bg-slate-50/50">
                           <td colSpan={8} className="px-4 py-2">
                             <VendorLineItems invoices={docs.invoices} drawId={drawId} />
@@ -247,11 +240,6 @@ export default function VendorChecklist({ drawId }) {
                       </SelectContent>
                     </Select>
                     <div className="flex items-center gap-1 shrink-0">
-                      {docs.invoices && docs.invoices.length > 0 && (
-                        <Button size="icon" variant="ghost" className="h-8 w-8 text-slate-400 hover:text-slate-700" onClick={() => setExpandedDV(expandedDV === dv.id ? null : dv.id)} title="Toggle line items">
-                          {expandedDV === dv.id ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-                        </Button>
-                      )}
                       <Button size="icon" variant="ghost" className="h-8 w-8 text-slate-400 hover:text-slate-700" onClick={() => openAddInvoice(dv.id)} title="Add invoices">
                         <Plus className="w-4 h-4" />
                       </Button>
@@ -263,8 +251,9 @@ export default function VendorChecklist({ drawId }) {
                       </Button>
                     </div>
                   </div>
-                  {expandedDV === dv.id && docs.invoices && docs.invoices.length > 0 && (
-                    <div className="pt-1">
+                  {docs.invoices && docs.invoices.length > 0 && (
+                    <div className="pt-1 border-t">
+                      <div className="text-xs text-slate-500 mb-1">Line Items</div>
                       <VendorLineItems invoices={docs.invoices} drawId={drawId} />
                     </div>
                   )}
