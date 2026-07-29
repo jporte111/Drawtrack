@@ -4,13 +4,14 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Plus, Trash2, FileText, StickyNote } from "lucide-react";
+import { Plus, Trash2, FileText, StickyNote, ChevronDown, ChevronRight } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
 import AddVendorDialog from "./AddVendorDialog";
 import AddInvoiceDialog from "./AddInvoiceDialog";
 import InvoiceStatusCell from "./InvoiceStatusCell";
 import DocumentStatusCell from "./DocumentStatusCell";
 import GenerateLienReleasesDialog from "./GenerateLienReleasesDialog";
+import VendorLineItems from "./VendorLineItems";
 
 const DV_STATUSES = ["pending", "documents_requested", "documents_received", "under_review", "complete"];
 
@@ -20,6 +21,7 @@ export default function VendorChecklist({ drawId }) {
   const [genVendor, setGenVendor] = useState({ name: "", amount: null });
   const [addInvoiceOpen, setAddInvoiceOpen] = useState(false);
   const [addInvoiceDVId, setAddInvoiceDVId] = useState(null);
+  const [expandedDV, setExpandedDV] = useState(null);
   const queryClient = useQueryClient();
 
   const { data: drawVendors = [] } = useQuery({
@@ -125,53 +127,69 @@ export default function VendorChecklist({ drawId }) {
                 {drawVendors.map((dv) => {
                   const vendor = vendorMap.get(dv.vendor_id);
                   const docs = docsByDV[dv.id] || {};
+                  const expanded = expandedDV === dv.id;
+                  const hasInvoices = docs.invoices && docs.invoices.length > 0;
                   return (
-                    <tr key={dv.id} className="border-b last:border-0 hover:bg-slate-50">
-                      <td className="px-2 py-2.5 font-medium text-slate-900">
-                        {vendor?.name || "Unknown"}
-                        {dv.notes && (
-                          <Popover>
-                            <PopoverTrigger asChild>
-                              <button type="button" className="text-xs font-normal text-slate-400 hover:text-slate-700 mt-0.5 max-w-[160px] truncate text-left flex items-center gap-1 cursor-pointer">
-                                <StickyNote className="w-3 h-3 shrink-0" />
-                                <span className="truncate">{dv.notes}</span>
-                              </button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-80 text-sm" side="top">
-                              <p className="text-slate-700 whitespace-pre-wrap">{dv.notes}</p>
-                            </PopoverContent>
-                          </Popover>
-                        )}
-                      </td>
-                      <td className="px-2 py-2.5 text-slate-600 max-w-[140px] truncate">{dv.scope_of_work || "—"}</td>
-                      <td className="px-2 py-2.5 text-right font-medium">
-                        {formatCurrency(invoiceTotalByDV[dv.id] || 0)}
-                      </td>
-                      <td className="px-2 py-2"><InvoiceStatusCell invoices={docs.invoices} drawId={drawId} /></td>
-                      <td className="px-2 py-2"><DocumentStatusCell doc={docs.conditional_lien_release} drawId={drawId} /></td>
-                      <td className="px-2 py-2"><DocumentStatusCell doc={docs.unconditional_lien_release} drawId={drawId} /></td>
-                      <td className="px-2 py-2">
-                        <Select value={dv.status} onValueChange={(v) => handleDVStatusChange(dv.id, v)}>
-                          <SelectTrigger className="h-7 text-xs w-36"><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            {DV_STATUSES.map((s) => <SelectItem key={s} value={s}>{s.replace(/_/g, " ")}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                      </td>
-                      <td className="px-2 py-2">
-                        <div className="flex items-center gap-1">
-                          <Button size="icon" variant="ghost" className="h-7 w-7 text-slate-400 hover:text-slate-700" onClick={() => openAddInvoice(dv.id)} title="Add invoices">
-                            <Plus className="w-3.5 h-3.5" />
-                          </Button>
-                          <Button size="icon" variant="ghost" className="h-7 w-7 text-slate-400 hover:text-slate-700" onClick={() => openGenerateDialog(vendor?.name || "Unknown", invoiceTotalByDV[dv.id] || 0)} title="Generate lien release forms">
-                            <FileText className="w-3.5 h-3.5" />
-                          </Button>
-                          <Button size="icon" variant="ghost" className="h-7 w-7 text-slate-400 hover:text-red-600" onClick={() => handleRemoveVendor(dv.id)}>
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
+                    <React.Fragment key={dv.id}>
+                      <tr className="border-b last:border-0 hover:bg-slate-50">
+                        <td className="px-2 py-2.5 font-medium text-slate-900">
+                          {vendor?.name || "Unknown"}
+                          {dv.notes && (
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <button type="button" className="text-xs font-normal text-slate-400 hover:text-slate-700 mt-0.5 max-w-[160px] truncate text-left flex items-center gap-1 cursor-pointer">
+                                  <StickyNote className="w-3 h-3 shrink-0" />
+                                  <span className="truncate">{dv.notes}</span>
+                                </button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-80 text-sm" side="top">
+                                <p className="text-slate-700 whitespace-pre-wrap">{dv.notes}</p>
+                              </PopoverContent>
+                            </Popover>
+                          )}
+                        </td>
+                        <td className="px-2 py-2.5 text-slate-600 max-w-[140px] truncate">{dv.scope_of_work || "—"}</td>
+                        <td className="px-2 py-2.5 text-right font-medium">
+                          {formatCurrency(invoiceTotalByDV[dv.id] || 0)}
+                        </td>
+                        <td className="px-2 py-2"><InvoiceStatusCell invoices={docs.invoices} drawId={drawId} /></td>
+                        <td className="px-2 py-2"><DocumentStatusCell doc={docs.conditional_lien_release} drawId={drawId} /></td>
+                        <td className="px-2 py-2"><DocumentStatusCell doc={docs.unconditional_lien_release} drawId={drawId} /></td>
+                        <td className="px-2 py-2">
+                          <Select value={dv.status} onValueChange={(v) => handleDVStatusChange(dv.id, v)}>
+                            <SelectTrigger className="h-7 text-xs w-36"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              {DV_STATUSES.map((s) => <SelectItem key={s} value={s}>{s.replace(/_/g, " ")}</SelectItem>)}
+                            </SelectContent>
+                          </Select>
+                        </td>
+                        <td className="px-2 py-2">
+                          <div className="flex items-center gap-1">
+                            <Button size="icon" variant="ghost" className="h-7 w-7 text-slate-400 hover:text-slate-700" onClick={() => openAddInvoice(dv.id)} title="Add invoices">
+                              <Plus className="w-3.5 h-3.5" />
+                            </Button>
+                            <Button size="icon" variant="ghost" className="h-7 w-7 text-slate-400 hover:text-slate-700" onClick={() => openGenerateDialog(vendor?.name || "Unknown", invoiceTotalByDV[dv.id] || 0)} title="Generate lien release forms">
+                              <FileText className="w-3.5 h-3.5" />
+                            </Button>
+                            <Button size="icon" variant="ghost" className="h-7 w-7 text-slate-400 hover:text-red-600" onClick={() => handleRemoveVendor(dv.id)}>
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </Button>
+                            {hasInvoices && (
+                              <Button size="icon" variant="ghost" className="h-7 w-7 text-slate-400 hover:text-slate-700" onClick={() => setExpandedDV(expanded ? null : dv.id)} title="Toggle line items">
+                                {expanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+                              </Button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                      {expanded && hasInvoices && (
+                        <tr className="bg-slate-50/50">
+                          <td colSpan={8} className="px-4 py-2">
+                            <VendorLineItems invoices={docs.invoices} drawId={drawId} />
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
                   );
                 })}
               </tbody>
@@ -229,6 +247,11 @@ export default function VendorChecklist({ drawId }) {
                       </SelectContent>
                     </Select>
                     <div className="flex items-center gap-1 shrink-0">
+                      {docs.invoices && docs.invoices.length > 0 && (
+                        <Button size="icon" variant="ghost" className="h-8 w-8 text-slate-400 hover:text-slate-700" onClick={() => setExpandedDV(expandedDV === dv.id ? null : dv.id)} title="Toggle line items">
+                          {expandedDV === dv.id ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                        </Button>
+                      )}
                       <Button size="icon" variant="ghost" className="h-8 w-8 text-slate-400 hover:text-slate-700" onClick={() => openAddInvoice(dv.id)} title="Add invoices">
                         <Plus className="w-4 h-4" />
                       </Button>
@@ -240,6 +263,11 @@ export default function VendorChecklist({ drawId }) {
                       </Button>
                     </div>
                   </div>
+                  {expandedDV === dv.id && docs.invoices && docs.invoices.length > 0 && (
+                    <div className="pt-1">
+                      <VendorLineItems invoices={docs.invoices} drawId={drawId} />
+                    </div>
+                  )}
                 </div>
               );
             })}
