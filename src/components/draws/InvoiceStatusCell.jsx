@@ -16,7 +16,16 @@ export default function InvoiceStatusCell({ invoices, drawId }) {
   }
 
   if (invoices.length === 1) {
-    return <DocumentStatusCell doc={invoices[0]} drawId={drawId} />;
+    const doc = invoices[0];
+    if (doc.document_type === "receipt") {
+      return (
+        <div className="flex items-center gap-1.5">
+          <span className="text-xs font-medium text-cyan-600 bg-cyan-100 px-1.5 py-0.5 rounded shrink-0">Receipt</span>
+          <div className="flex-1 min-w-0"><DocumentStatusCell doc={doc} drawId={drawId} /></div>
+        </div>
+      );
+    }
+    return <DocumentStatusCell doc={doc} drawId={drawId} />;
   }
 
   const completeCount = invoices.filter((d) => d.status === "complete" || d.status === "na").length;
