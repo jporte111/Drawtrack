@@ -9,6 +9,7 @@ import { formatCurrency } from "@/lib/format";
 import AddVendorDialog from "./AddVendorDialog";
 import AddInvoiceDialog from "./AddInvoiceDialog";
 import InvoiceStatusCell from "./InvoiceStatusCell";
+import EditableAmount from "./EditableAmount";
 import DocumentStatusCell from "./DocumentStatusCell";
 import GenerateLienReleasesDialog from "./GenerateLienReleasesDialog";
 const DV_STATUSES = ["pending", "documents_requested", "documents_received", "under_review", "complete"];
@@ -73,6 +74,11 @@ export default function VendorChecklist({ drawId }) {
     queryClient.invalidateQueries({ queryKey: ["drawVendors", drawId] });
   };
 
+  const handleInvoiceAmountChange = async (docId, amount) => {
+    await base44.entities.Document.update(docId, { amount });
+    queryClient.invalidateQueries({ queryKey: ["documents"] });
+  };
+
   const handleRemoveVendor = async (dvId) => {
     await base44.entities.OpenItem.deleteMany({ draw_vendor_id: dvId });
     await base44.entities.Document.deleteMany({ draw_vendor_id: dvId });
@@ -132,17 +138,23 @@ export default function VendorChecklist({ drawId }) {
                           {docs.invoices && docs.invoices.length > 0 && (
                             <div className="flex flex-col gap-0.5 mt-1">
                               {docs.invoices.map((inv, i) => (
-                                <a
-                                  key={inv.id}
-                                  href={inv.file_url || "#"}
-                                  target={inv.file_url ? "_blank" : undefined}
-                                  rel="noopener noreferrer"
-                                  className="inline-flex items-center gap-1 text-xs text-slate-400 hover:text-slate-700 max-w-[180px] truncate"
-                                  title={inv.file_url ? "View file" : "No file uploaded"}
-                                >
-                                  <ExternalLink className="w-3 h-3 shrink-0" />
-                                  <span className="truncate">{inv.notes || `${inv.document_type === "receipt" ? "Receipt" : "Inv"} ${i + 1}`}</span>
-                                </a>
+                                <div key={inv.id} className="flex items-center gap-2">
+                                  <a
+                                    href={inv.file_url || "#"}
+                                    target={inv.file_url ? "_blank" : undefined}
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-1 text-xs text-slate-400 hover:text-slate-700 max-w-[120px] truncate"
+                                    title={inv.file_url ? "View file" : "No file uploaded"}
+                                  >
+                                    <ExternalLink className="w-3 h-3 shrink-0" />
+                                    <span className="truncate">{inv.notes || `${inv.document_type === "receipt" ? "Receipt" : "Inv"} ${i + 1}`}</span>
+                                  </a>
+                                  <EditableAmount
+                                    amount={inv.amount}
+                                    onSave={(val) => handleInvoiceAmountChange(inv.id, val)}
+                                    className="text-xs text-slate-600"
+                                  />
+                                </div>
                               ))}
                             </div>
                           )}
@@ -210,17 +222,23 @@ export default function VendorChecklist({ drawId }) {
                       {docs.invoices && docs.invoices.length > 0 && (
                         <div className="flex flex-col gap-0.5 mt-1">
                           {docs.invoices.map((inv, i) => (
-                            <a
-                              key={inv.id}
-                              href={inv.file_url || "#"}
-                              target={inv.file_url ? "_blank" : undefined}
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1 text-xs text-slate-400 hover:text-slate-700 max-w-[180px] truncate"
-                              title={inv.file_url ? "View file" : "No file uploaded"}
-                            >
-                              <ExternalLink className="w-3 h-3 shrink-0" />
-                              <span className="truncate">{inv.notes || `${inv.document_type === "receipt" ? "Receipt" : "Inv"} ${i + 1}`}</span>
-                            </a>
+                            <div key={inv.id} className="flex items-center gap-2">
+                              <a
+                                href={inv.file_url || "#"}
+                                target={inv.file_url ? "_blank" : undefined}
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 text-xs text-slate-400 hover:text-slate-700 max-w-[120px] truncate"
+                                title={inv.file_url ? "View file" : "No file uploaded"}
+                              >
+                                <ExternalLink className="w-3 h-3 shrink-0" />
+                                <span className="truncate">{inv.notes || `${inv.document_type === "receipt" ? "Receipt" : "Inv"} ${i + 1}`}</span>
+                              </a>
+                              <EditableAmount
+                                amount={inv.amount}
+                                onSave={(val) => handleInvoiceAmountChange(inv.id, val)}
+                                className="text-xs text-slate-600"
+                              />
+                            </div>
                           ))}
                         </div>
                       )}
