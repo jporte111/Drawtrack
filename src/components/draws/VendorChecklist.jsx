@@ -129,7 +129,7 @@ export default function VendorChecklist({ drawId }) {
               <thead>
                 <tr className="border-b text-left text-xs text-slate-500 uppercase tracking-wide">
                   <th className="px-2 py-2 font-semibold">Vendor</th>
-                  <th className="px-2 py-2 font-semibold">Scope</th>
+                  <th className="px-2 py-2 font-semibold">Budget Category</th>
                   <th className="px-2 py-2 font-semibold text-right">Amount</th>
                   <th className="px-2 py-2 font-semibold">Invoice / Receipt</th>
                   <th className="px-2 py-2 font-semibold">Conditional Release</th>
