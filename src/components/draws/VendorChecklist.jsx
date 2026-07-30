@@ -74,9 +74,21 @@ export default function VendorChecklist({ drawId }) {
     queryClient.invalidateQueries({ queryKey: ["drawVendors", drawId] });
   };
 
-  const handleInvoiceAmountChange = async (docId, amount) => {
-    await base44.entities.Document.update(docId, { amount });
+  const handleInvoiceAmountChange = async (doc, amount) => {
+    await base44.entities.Document.update(doc.id, { amount });
     queryClient.invalidateQueries({ queryKey: ["documents"] });
+
+    // Sync the linked Open Item title so the displayed amount stays in step
+    const linkedItems = await base44.entities.OpenItem.filter({ document_id: doc.id });
+    const active = linkedItems.filter((i) => i.status === "open" || i.status === "in_progress");
+    const formatted = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(amount);
+    await Promise.all(
+      active.map((item) => {
+        const base = (item.title || "").replace(/\s—\s.*$/, "").trim();
+        return base44.entities.OpenItem.update(item.id, { title: `${base} — ${formatted}` });
+      })
+    );
+    queryClient.invalidateQueries({ queryKey: ["openItems", drawId] });
   };
 
   const handleRemoveVendor = async (dvId) => {
@@ -171,7 +183,7 @@ export default function VendorChecklist({ drawId }) {
                           {docs.invoices && docs.invoices.length === 1 ? (
                             <EditableAmount
                               amount={invoiceTotalByDV[dv.id] || 0}
-                              onSave={(val) => handleInvoiceAmountChange(docs.invoices[0].id, val)}
+                              onSave={(val) => handleInvoiceAmountChange(docs.invoices[0], val)}
                               className="justify-end"
                             />
                           ) : (
@@ -256,7 +268,7 @@ export default function VendorChecklist({ drawId }) {
                       {docs.invoices && docs.invoices.length === 1 ? (
                         <EditableAmount
                           amount={invoiceTotalByDV[dv.id] || 0}
-                          onSave={(val) => handleInvoiceAmountChange(docs.invoices[0].id, val)}
+                          onSave={(val) => handleInvoiceAmountChange(docs.invoices[0], val)}
                         />
                       ) : (
                         <span>{formatCurrency(invoiceTotalByDV[dv.id] || 0)}</span>
