@@ -138,23 +138,17 @@ export default function VendorChecklist({ drawId }) {
                           {docs.invoices && docs.invoices.length > 0 && (
                             <div className="flex flex-col gap-0.5 mt-1">
                               {docs.invoices.map((inv, i) => (
-                                <div key={inv.id} className="flex items-center gap-2">
-                                  <a
-                                    href={inv.file_url || "#"}
-                                    target={inv.file_url ? "_blank" : undefined}
-                                    rel="noopener noreferrer"
-                                    className="inline-flex items-center gap-1 text-xs text-slate-400 hover:text-slate-700 max-w-[120px] truncate"
-                                    title={inv.file_url ? "View file" : "No file uploaded"}
-                                  >
-                                    <ExternalLink className="w-3 h-3 shrink-0" />
-                                    <span className="truncate">{inv.notes || `${inv.document_type === "receipt" ? "Receipt" : "Inv"} ${i + 1}`}</span>
-                                  </a>
-                                  <EditableAmount
-                                    amount={inv.amount}
-                                    onSave={(val) => handleInvoiceAmountChange(inv.id, val)}
-                                    className="text-xs text-slate-600"
-                                  />
-                                </div>
+                                <a
+                                  key={inv.id}
+                                  href={inv.file_url || "#"}
+                                  target={inv.file_url ? "_blank" : undefined}
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1 text-xs text-slate-400 hover:text-slate-700 max-w-[180px] truncate"
+                                  title={inv.file_url ? "View file" : "No file uploaded"}
+                                >
+                                  <ExternalLink className="w-3 h-3 shrink-0" />
+                                  <span className="truncate">{inv.notes || `${inv.document_type === "receipt" ? "Receipt" : "Inv"} ${i + 1}`}</span>
+                                </a>
                               ))}
                             </div>
                           )}
@@ -174,7 +168,15 @@ export default function VendorChecklist({ drawId }) {
                         </td>
                         <td className="px-2 py-2.5 text-slate-600 max-w-[140px] truncate align-top">{dv.scope_of_work || "—"}</td>
                         <td className="px-2 py-2.5 text-right font-medium">
-                          {formatCurrency(invoiceTotalByDV[dv.id] || 0)}
+                          {docs.invoices && docs.invoices.length === 1 ? (
+                            <EditableAmount
+                              amount={invoiceTotalByDV[dv.id] || 0}
+                              onSave={(val) => handleInvoiceAmountChange(docs.invoices[0].id, val)}
+                              className="justify-end"
+                            />
+                          ) : (
+                            <span>{formatCurrency(invoiceTotalByDV[dv.id] || 0)}</span>
+                          )}
                         </td>
                         <td className="px-2 py-2"><InvoiceStatusCell invoices={docs.invoices} drawId={drawId} /></td>
                         <td className="px-2 py-2"><DocumentStatusCell doc={docs.conditional_lien_release} drawId={drawId} /></td>
@@ -222,23 +224,17 @@ export default function VendorChecklist({ drawId }) {
                       {docs.invoices && docs.invoices.length > 0 && (
                         <div className="flex flex-col gap-0.5 mt-1">
                           {docs.invoices.map((inv, i) => (
-                            <div key={inv.id} className="flex items-center gap-2">
-                              <a
-                                href={inv.file_url || "#"}
-                                target={inv.file_url ? "_blank" : undefined}
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1 text-xs text-slate-400 hover:text-slate-700 max-w-[120px] truncate"
-                                title={inv.file_url ? "View file" : "No file uploaded"}
-                              >
-                                <ExternalLink className="w-3 h-3 shrink-0" />
-                                <span className="truncate">{inv.notes || `${inv.document_type === "receipt" ? "Receipt" : "Inv"} ${i + 1}`}</span>
-                              </a>
-                              <EditableAmount
-                                amount={inv.amount}
-                                onSave={(val) => handleInvoiceAmountChange(inv.id, val)}
-                                className="text-xs text-slate-600"
-                              />
-                            </div>
+                            <a
+                              key={inv.id}
+                              href={inv.file_url || "#"}
+                              target={inv.file_url ? "_blank" : undefined}
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 text-xs text-slate-400 hover:text-slate-700 max-w-[180px] truncate"
+                              title={inv.file_url ? "View file" : "No file uploaded"}
+                            >
+                              <ExternalLink className="w-3 h-3 shrink-0" />
+                              <span className="truncate">{inv.notes || `${inv.document_type === "receipt" ? "Receipt" : "Inv"} ${i + 1}`}</span>
+                            </a>
                           ))}
                         </div>
                       )}
@@ -257,7 +253,14 @@ export default function VendorChecklist({ drawId }) {
                       )}
                     </div>
                     <div className="font-medium text-sm shrink-0">
-                      {formatCurrency(invoiceTotalByDV[dv.id] || 0)}
+                      {docs.invoices && docs.invoices.length === 1 ? (
+                        <EditableAmount
+                          amount={invoiceTotalByDV[dv.id] || 0}
+                          onSave={(val) => handleInvoiceAmountChange(docs.invoices[0].id, val)}
+                        />
+                      ) : (
+                        <span>{formatCurrency(invoiceTotalByDV[dv.id] || 0)}</span>
+                      )}
                     </div>
                   </div>
                   <div className="grid grid-cols-1 gap-2">
