@@ -159,7 +159,7 @@ export default function VendorChecklist({ drawId }) {
                                   title={inv.file_url ? "View file" : "No file uploaded"}
                                 >
                                   <ExternalLink className="w-3 h-3 shrink-0" />
-                                  <span className="truncate">{inv.notes || `${inv.document_type === "receipt" ? "Receipt" : "Inv"} ${i + 1}`}</span>
+                                  <span className="truncate">{inv.invoice_number ? `${inv.document_type === "receipt" ? "Receipt" : "Inv."} ${inv.invoice_number}` : (inv.notes || `${inv.document_type === "receipt" ? "Receipt" : "Inv"} ${i + 1}`)}</span>
                                 </a>
                               ))}
                             </div>
@@ -245,7 +245,7 @@ export default function VendorChecklist({ drawId }) {
                               title={inv.file_url ? "View file" : "No file uploaded"}
                             >
                               <ExternalLink className="w-3 h-3 shrink-0" />
-                              <span className="truncate">{inv.notes || `${inv.document_type === "receipt" ? "Receipt" : "Inv"} ${i + 1}`}</span>
+                              <span className="truncate">{inv.invoice_number ? `${inv.document_type === "receipt" ? "Receipt" : "Inv."} ${inv.invoice_number}` : (inv.notes || `${inv.document_type === "receipt" ? "Receipt" : "Inv"} ${i + 1}`)}</span>
                             </a>
                           ))}
                         </div>

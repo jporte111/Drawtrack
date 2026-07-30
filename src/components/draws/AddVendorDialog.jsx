@@ -134,6 +134,7 @@ export default function AddVendorDialog({ open, onOpenChange, drawId, clientId }
           status: "complete",
           file_url: inv.file_url,
           amount: inv.amount ? Number(inv.amount) : null,
+          invoice_number: inv.invoice_number || null,
           received_date: new Date().toISOString().split("T")[0],
         });
       }

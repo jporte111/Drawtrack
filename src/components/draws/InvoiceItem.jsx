@@ -9,6 +9,7 @@ const EXTRACTION_SCHEMA = {
   type: "object",
   properties: {
     vendor_name: { type: "string", description: "Name of the vendor/company that issued this invoice or receipt" },
+    invoice_number: { type: "string", description: "Invoice or receipt number printed on the document" },
     amount: { type: "number", description: "Total amount in dollars" },
     scope_of_work: { type: "string", description: "Description of work, services, or items provided" },
     contact_name: { type: "string", description: "Contact person name if available" },
@@ -41,6 +42,7 @@ export default function InvoiceItem({ invoice, onChange, onRemove, onExtracted }
           filename: file.name,
           uploading: false,
           amount: result.output.amount != null ? String(result.output.amount) : invoice.amount,
+          invoice_number: result.output.invoice_number || invoice.invoice_number || "",
           extractedData: result.output,
         });
         if (onExtracted) onExtracted(result.output);
@@ -97,6 +99,16 @@ export default function InvoiceItem({ invoice, onChange, onRemove, onExtracted }
           onChange={(e) => update({ amount: e.target.value })}
           placeholder="0.00"
           className="h-8 w-40"
+        />
+      </div>
+      <div className="flex items-center gap-2">
+        <span className="text-xs text-slate-500 w-16 shrink-0">Inv. #</span>
+        <Input
+          type="text"
+          value={invoice.invoice_number || ""}
+          onChange={(e) => update({ invoice_number: e.target.value })}
+          placeholder="Auto-detected from file"
+          className="h-8 flex-1"
         />
       </div>
     </div>

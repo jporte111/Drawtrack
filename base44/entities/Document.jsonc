@@ -32,6 +32,9 @@
     "amount": {
       "type": "number"
     },
+    "invoice_number": {
+      "type": "string"
+    },
     "received_date": {
       "type": "string",
       "format": "date"
