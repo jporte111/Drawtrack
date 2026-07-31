@@ -86,20 +86,20 @@ export default function ClientList() {
                   <div className="text-xs text-slate-500">Vendors</div>
                 </div>
               </div>
-              <div className="grid grid-cols-3 gap-2 mt-auto">
+              <div className="grid grid-cols-3 gap-1.5 mt-auto">
                 <Link to={`/clients/${client.id}/draws`}>
-                  <Button variant="outline" size="sm" className="w-full">
-                    <ClipboardList className="w-3.5 h-3.5 mr-1" />Draws
+                  <Button variant="outline" size="sm" className="w-full px-2 gap-1 text-xs">
+                    <ClipboardList className="w-3.5 h-3.5" />Draws
                   </Button>
                 </Link>
                 <Link to={`/clients/${client.id}/vendors`}>
-                  <Button variant="outline" size="sm" className="w-full">
-                    <Users className="w-3.5 h-3.5 mr-1" />Vendors
+                  <Button variant="outline" size="sm" className="w-full px-2 gap-1 text-xs">
+                    <Users className="w-3.5 h-3.5" />Vendors
                   </Button>
                 </Link>
                 <Link to={`/clients/${client.id}/budget`}>
-                  <Button variant="outline" size="sm" className="w-full">
-                    <DollarSign className="w-3.5 h-3.5 mr-1" />Budget
+                  <Button variant="outline" size="sm" className="w-full px-2 gap-1 text-xs">
+                    <DollarSign className="w-3.5 h-3.5" />Budget
                   </Button>
                 </Link>
               </div>
