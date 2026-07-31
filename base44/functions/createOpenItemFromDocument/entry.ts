@@ -17,53 +17,43 @@ const STATUS_LABELS = {
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
-    const body = await req.json();
-    const { document_id, draw_vendor_id, document_type, status } = body;
+    const user = await base44.auth.me();
+    if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
-    if (!document_id || !draw_vendor_id) {
+    const body = await req.json();
+    const { document_id, draw_vendor_id, draw_cycle_id, document_type, status, amount } = body;
+
+    if (!document_id || !draw_vendor_id || !draw_cycle_id) {
       return Response.json({ error: "Missing required fields" }, { status: 400 });
     }
 
     const docLabel = DOC_LABELS[document_type] || "Document";
     const statusLabel = STATUS_LABELS[status] || "Unresolved";
 
-    // Fetch the document to get the amount for a more descriptive title
     let amountLabel = "";
-    try {
-      const doc = await base44.asServiceRole.entities.Document.get(document_id);
-      if (doc && doc.amount != null) {
-        const formatted = new Intl.NumberFormat("en-US", {
-          style: "currency",
-          currency: "USD",
-        }).format(doc.amount);
-        amountLabel = ` — ${formatted}`;
-      }
-    } catch (_e) {
-      // If document fetch fails, continue without the amount
+    const amt = amount != null ? Number(amount) : null;
+    if (amt != null && !isNaN(amt)) {
+      amountLabel = ` — ${new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(amt)}`;
     }
 
     const title = `${statusLabel}: ${docLabel}${amountLabel}`;
 
-    // Look up the DrawVendor to get the draw_cycle_id
-    const drawVendor = await base44.asServiceRole.entities.DrawVendor.get(draw_vendor_id);
-
-    // Check for existing active open items for this document
-    const existing = await base44.asServiceRole.entities.OpenItem.filter({ document_id });
+    // User-scoped, RLS-enforced: only the authenticated caller's accessible items are visible
+    const existing = await base44.entities.OpenItem.filter({ document_id });
     const activeItems = existing.filter((i) => i.status === "open" || i.status === "in_progress");
 
     if (activeItems.length > 0) {
-      // Update the title of existing items to reflect the current status
       for (const item of activeItems) {
-        await base44.asServiceRole.entities.OpenItem.update(item.id, { title });
+        await base44.entities.OpenItem.update(item.id, { title });
       }
       return Response.json({ success: true, message: "Updated existing open item title", skipped: true });
     }
 
-    await base44.asServiceRole.entities.OpenItem.create({
-      draw_cycle_id: drawVendor.draw_cycle_id,
-      draw_vendor_id: draw_vendor_id,
-      document_id: document_id,
-      title: title,
+    await base44.entities.OpenItem.create({
+      draw_cycle_id,
+      draw_vendor_id,
+      document_id,
+      title,
       priority: "medium",
       status: "open",
     });

@@ -58,7 +58,9 @@ export default function Budget() {
     queryFn: () => base44.entities.Client.get(clientId),
   });
 
-  const budgetUrl = client?.budget_url;
+  const rawBudgetUrl = client?.budget_url;
+  // Only allow http/https URLs to prevent javascript: and other dangerous schemes in href/src
+  const budgetUrl = rawBudgetUrl && /^https?:\/\//i.test(rawBudgetUrl) ? rawBudgetUrl : null;
 
   const startEdit = () => {
     setUrlInput(budgetUrl || "");

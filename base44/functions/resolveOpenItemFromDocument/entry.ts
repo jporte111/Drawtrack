@@ -3,6 +3,9 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.38';
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
+    const user = await base44.auth.me();
+    if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
+
     const body = await req.json();
     const { document_id } = body;
 
@@ -10,14 +13,14 @@ Deno.serve(async (req) => {
       return Response.json({ error: "Missing document_id" }, { status: 400 });
     }
 
-    // Find open items linked to this document
-    const openItems = await base44.asServiceRole.entities.OpenItem.filter({ document_id });
+    // User-scoped, RLS-enforced: only the authenticated caller's accessible items are resolved
+    const openItems = await base44.entities.OpenItem.filter({ document_id });
     const today = new Date().toISOString().split("T")[0];
 
     let resolved = 0;
     for (const item of openItems) {
       if (item.status === "open" || item.status === "in_progress") {
-        await base44.asServiceRole.entities.OpenItem.update(item.id, {
+        await base44.entities.OpenItem.update(item.id, {
           status: "resolved",
           resolved_date: today,
         });

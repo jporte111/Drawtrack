@@ -5,6 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { statusConfig } from "@/lib/statusConfig";
 
 const DOC_STATUSES = ["missing", "pending_signature", "needs_correction", "pending_payment", "complete", "na"];
+const FLAGGED_STATUSES = ["missing", "pending_signature", "needs_correction", "pending_payment"];
 
 export default function DocumentStatusCell({ doc, drawId }) {
   const queryClient = useQueryClient();
@@ -20,14 +21,17 @@ export default function DocumentStatusCell({ doc, drawId }) {
     }
     await base44.entities.Document.update(doc.id, update);
 
-    if (status === "complete" || status === "na") {
-      const today = new Date().toISOString().split("T")[0];
-      const items = await base44.entities.OpenItem.filter({ document_id: doc.id });
-      await Promise.all(
-        items
-          .filter((i) => i.status === "open" || i.status === "in_progress")
-          .map((i) => base44.entities.OpenItem.update(i.id, { status: "resolved", resolved_date: today }))
-      );
+    if (FLAGGED_STATUSES.includes(status)) {
+      await base44.functions.invoke("createOpenItemFromDocument", {
+        document_id: doc.id,
+        draw_vendor_id: doc.draw_vendor_id,
+        draw_cycle_id: drawId,
+        document_type: doc.document_type,
+        status,
+        amount: doc.amount,
+      });
+    } else if (status === "complete" || status === "na") {
+      await base44.functions.invoke("resolveOpenItemFromDocument", { document_id: doc.id });
     }
 
     queryClient.invalidateQueries({ queryKey: ["documents"] });
