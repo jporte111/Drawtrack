@@ -41,7 +41,7 @@ export default function Layout() {
           <div className="text-slate-400 text-xs">Construction Draws</div>
         </div>
       </div>
-      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto bg-slate-800">
         <Link
           to="/"
           onClick={() => setSidebarOpen(false)}
