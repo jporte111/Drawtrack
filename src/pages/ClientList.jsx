@@ -6,6 +6,7 @@ import { Plus, ClipboardList, Users, Building2, DollarSign } from "lucide-react"
 import { Button } from "@/components/ui/button";
 import ClientFormDialog from "@/components/clients/ClientFormDialog";
 import ClientActionsMenu from "@/components/clients/ClientActionsMenu";
+import ActionCenter from "@/components/dashboard/ActionCenter";
 
 export default function ClientList() {
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -52,6 +53,8 @@ export default function ClientList() {
         </div>
         <Button onClick={() => setDialogOpen(true)} className="shrink-0"><Plus className="w-4 h-4 mr-1.5" />New Client</Button>
       </div>
+
+      <ActionCenter />
 
       {isLoading ? (
         <div className="text-center py-12 text-slate-400">Loading...</div>
