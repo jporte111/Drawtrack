@@ -5,7 +5,7 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { DollarSign, ExternalLink, Pencil, ArrowLeft, ZoomIn, ZoomOut, Maximize, Hand, MousePointer } from "lucide-react";
+import { DollarSign, ExternalLink, Pencil, ArrowLeft, ZoomIn, ZoomOut, Maximize, Hand, MousePointer, RefreshCw } from "lucide-react";
 
 export default function Budget() {
   const { clientId } = useParams();
@@ -15,6 +15,7 @@ export default function Budget() {
   const [saving, setSaving] = useState(false);
   const [zoom, setZoom] = useState(1);
   const [iframeLoaded, setIframeLoaded] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(() => Date.now());
   const [isDragging, setIsDragging] = useState(false);
   const [panMode, setPanMode] = useState(true);
   const scrollRef = useRef(null);
@@ -83,11 +84,14 @@ export default function Budget() {
   // Convert a Dropbox share link to a direct-download URL that viewers can fetch
   const getDirectUrl = (url) => {
     if (!url) return null;
-    if (url.includes("dropbox.com")) {
+    let direct = url;
+    if (direct.includes("dropbox.com")) {
       // Change dl=0 → dl=1 for direct file download (preserves rlkey auth)
-      return url.replace("dl=0", "dl=1");
+      direct = direct.replace("dl=0", "dl=1");
     }
-    return url;
+    // Cache-buster so the Office Online viewer fetches the latest file from Dropbox
+    const sep = direct.includes("?") ? "&" : "?";
+    return `${direct}${sep}cb=${refreshKey}`;
   };
 
   const directUrl = budgetUrl ? getDirectUrl(budgetUrl) : null;
@@ -179,6 +183,15 @@ export default function Budget() {
                 </Button>
               )}
             </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => { setRefreshKey(Date.now()); setIframeLoaded(false); }}
+              className="gap-1"
+              title="Reload the latest version from Dropbox"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />Refresh
+            </Button>
             <span className="text-sm text-slate-500 tabular-nums">{Math.round(zoom * 100)}%</span>
           </div>
           <div
