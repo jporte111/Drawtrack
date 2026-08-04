@@ -57,19 +57,23 @@ export default function OpenItemsSection({ drawId }) {
 
   const unresolved = items.filter((i) => i.status === "open" || i.status === "in_progress");
 
-  // Group by draw_vendor_id, sort items within each group by priority
+  // Group by normalized vendor name so duplicate / near-duplicate vendor entries combine
   const vendorGroups = useMemo(() => {
+    const normalize = (name) =>
+      (name || "").toLowerCase().replace(/[-]+/g, " ").replace(/\s+/g, " ").trim();
     const groups = new Map();
     for (const item of unresolved) {
-      const key = item.draw_vendor_id || "__unassigned";
-      if (!groups.has(key)) groups.set(key, []);
-      groups.get(key).push(item);
+      const dvId = item.draw_vendor_id;
+      const rawName = dvId ? vendorNameByDV.get(dvId) || "Unknown" : "Unassigned";
+      const key = dvId ? normalize(rawName) : "__unassigned";
+      if (!groups.has(key)) groups.set(key, { name: rawName, items: [] });
+      groups.get(key).items.push(item);
     }
-    for (const [, groupItems] of groups) {
-      groupItems.sort((a, b) => (PRIORITY_ORDER[a.priority] ?? 9) - (PRIORITY_ORDER[b.priority] ?? 9));
+    for (const [, group] of groups) {
+      group.items.sort((a, b) => (PRIORITY_ORDER[a.priority] ?? 9) - (PRIORITY_ORDER[b.priority] ?? 9));
     }
     return [...groups.entries()];
-  }, [unresolved]);
+  }, [unresolved, vendorNameByDV]);
 
   const toggleVendor = (key) => {
     setExpandedVendors((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -123,9 +127,9 @@ export default function OpenItemsSection({ drawId }) {
         </div>
       ) : (
         <div className="space-y-2">
-          {vendorGroups.map(([vendorKey, groupItems]) => {
-            const vendorName =
-              vendorKey === "__unassigned" ? "Unassigned" : vendorNameByDV.get(vendorKey) || "Unknown";
+          {vendorGroups.map(([vendorKey, group]) => {
+            const groupItems = group.items;
+            const vendorName = vendorKey === "__unassigned" ? "Unassigned" : group.name;
             const isExpanded = expandedVendors[vendorKey];
             const highestPriority = getHighestPriority(groupItems);
             const docTypes = getOutstandingDocTypes(groupItems);
