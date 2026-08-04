@@ -41,7 +41,7 @@
   ],
   "rls": {
     "create": null,
-    "read": {},
+    "read": true,
     "update": {
       "$or": [
         {
