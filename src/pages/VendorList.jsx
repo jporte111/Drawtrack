@@ -8,21 +8,31 @@ import StatusBadge from "@/components/StatusBadge";
 import { vendorTypeConfig } from "@/lib/statusConfig";
 import VendorFormDialog from "@/components/vendors/VendorFormDialog";
 import VendorActionsMenu from "@/components/vendors/VendorActionsMenu";
+import LinkVendorDialog from "@/components/vendors/LinkVendorDialog";
 
 export default function VendorList() {
   const { clientId } = useParams();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingVendor, setEditingVendor] = useState(null);
+  const [linkOpen, setLinkOpen] = useState(false);
 
   const { data: client } = useQuery({
     queryKey: ["client", clientId],
     queryFn: () => base44.entities.Client.get(clientId),
     enabled: !!clientId,
   });
-  const { data: vendors = [], isLoading } = useQuery({
-    queryKey: ["vendors", clientId],
-    queryFn: () => base44.entities.Vendor.filter({ client_id: clientId }),
+  const { data: clientVendors = [], isLoading: isLoadingLinks } = useQuery({
+    queryKey: ["clientVendors", clientId],
+    queryFn: () => base44.entities.ClientVendor.filter({ client_id: clientId }),
+    enabled: !!clientId,
   });
+  const { data: allVendors = [] } = useQuery({
+    queryKey: ["vendors", "all"],
+    queryFn: () => base44.entities.Vendor.list(),
+  });
+  const linkedVendorIds = new Set(clientVendors.map((cv) => cv.vendor_id));
+  const vendors = allVendors.filter((v) => linkedVendorIds.has(v.id));
+  const isLoading = isLoadingLinks;
 
   const handleEdit = (vendor) => {
     setEditingVendor(vendor);
@@ -44,7 +54,10 @@ export default function VendorList() {
           <h1 className="text-2xl font-bold text-slate-900">{client?.name ? `${client.name} — Vendors` : "Vendors"}</h1>
           <p className="text-sm text-slate-500">All vendors for {client?.name || "this client"}</p>
         </div>
-        <Button onClick={() => setDialogOpen(true)} className="shrink-0"><Plus className="w-4 h-4 mr-1.5" />New Vendor</Button>
+        <div className="flex items-center gap-2 shrink-0">
+          <Button variant="outline" onClick={() => setLinkOpen(true)}><Plus className="w-4 h-4 mr-1.5" />Link Existing</Button>
+          <Button onClick={() => setDialogOpen(true)}><Plus className="w-4 h-4 mr-1.5" />New Vendor</Button>
+        </div>
       </div>
 
       {/* Desktop table */}
@@ -109,6 +122,7 @@ export default function VendorList() {
       </div>
 
       <VendorFormDialog open={dialogOpen} onOpenChange={handleOpenChange} vendor={editingVendor} clientId={clientId} />
+      <LinkVendorDialog open={linkOpen} onOpenChange={setLinkOpen} clientId={clientId} />
     </div>
   );
 }

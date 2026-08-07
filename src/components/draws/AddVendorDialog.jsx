@@ -29,9 +29,20 @@ export default function AddVendorDialog({ open, onOpenChange, drawId, clientId }
     queryKey: ["drawVendors", drawId],
     queryFn: () => base44.entities.DrawVendor.filter({ draw_cycle_id: drawId }),
   });
+  const { data: clientVendors = [] } = useQuery({
+    queryKey: ["clientVendors", clientId],
+    queryFn: () => base44.entities.ClientVendor.filter({ client_id: clientId }),
+    enabled: !!clientId,
+  });
 
   const linkedIds = new Set(drawVendors.map((dv) => dv.vendor_id));
-  const availableVendors = vendors.filter((v) => !linkedIds.has(v.id) && v.client_id === clientId);
+  const clientLinkedIds = new Set(clientVendors.map((cv) => cv.vendor_id));
+  const availableVendors = vendors.filter((v) => !linkedIds.has(v.id) && clientLinkedIds.has(v.id));
+  const ensureClientLink = async (vendorId) => {
+    if (!clientId || clientLinkedIds.has(vendorId)) return;
+    await base44.entities.ClientVendor.create({ client_id: clientId, vendor_id: vendorId, status: "active" });
+    queryClient.invalidateQueries({ queryKey: ["clientVendors", clientId] });
+  };
 
   useEffect(() => {
     if (open) {
@@ -53,6 +64,10 @@ export default function AddVendorDialog({ open, onOpenChange, drawId, clientId }
         status: "active",
         client_id: clientId,
       });
+      if (clientId) {
+        await base44.entities.ClientVendor.create({ client_id: clientId, vendor_id: newVendor.id, status: "active" });
+        queryClient.invalidateQueries({ queryKey: ["clientVendors", clientId] });
+      }
       queryClient.setQueryData(["vendors"], (old = []) => [...old, newVendor]);
       setForm((f) => ({ ...f, vendor_id: newVendor.id }));
       setShowNewVendor(false);
@@ -94,6 +109,7 @@ export default function AddVendorDialog({ open, onOpenChange, drawId, clientId }
       );
       if (existing) {
         setForm((f) => ({ ...f, vendor_id: existing.id }));
+        await ensureClientLink(existing.id);
       } else {
         const newVendor = await base44.entities.Vendor.create({
           name: data.vendor_name,
@@ -106,6 +122,10 @@ export default function AddVendorDialog({ open, onOpenChange, drawId, clientId }
           status: "active",
           client_id: clientId,
         });
+        if (clientId) {
+          await base44.entities.ClientVendor.create({ client_id: clientId, vendor_id: newVendor.id, status: "active" });
+          queryClient.invalidateQueries({ queryKey: ["clientVendors", clientId] });
+        }
         queryClient.setQueryData(["vendors"], (old = []) => [...old, newVendor]);
         setForm((f) => ({ ...f, vendor_id: newVendor.id }));
       }

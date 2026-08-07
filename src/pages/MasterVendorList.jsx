@@ -24,6 +24,17 @@ export default function MasterVendorList() {
 
   const clientMap = clients.reduce((acc, c) => { acc[c.id] = c.name; return acc; }, {});
 
+  const { data: clientVendors = [] } = useQuery({
+    queryKey: ["clientVendors", "all"],
+    queryFn: () => base44.entities.ClientVendor.list(),
+  });
+  const clientsByVendor = clientVendors.reduce((acc, cv) => {
+    const name = clientMap[cv.client_id];
+    if (name) (acc[cv.vendor_id] = acc[cv.vendor_id] || []).push(name);
+    return acc;
+  }, {});
+  const vendorClients = (vendorId) => clientsByVendor[vendorId] || [];
+
   const handleEdit = (vendor) => { setEditingVendor(vendor); setDialogOpen(true); };
   const handleOpenChange = (open) => { setDialogOpen(open); if (!open) setEditingVendor(null); };
 
@@ -63,7 +74,15 @@ export default function MasterVendorList() {
               vendors.map((vendor) => (
                 <tr key={vendor.id} className="border-b last:border-0 hover:bg-slate-50 transition-colors">
                   <td className="px-4 py-3 font-medium text-slate-900">{vendor.name}</td>
-                  <td className="px-4 py-3 text-sm text-slate-600">{clientMap[vendor.client_id] || "—"}</td>
+                  <td className="px-4 py-3 text-sm text-slate-600">
+                    {vendorClients(vendor.id).length > 0 ? (
+                      <div className="flex flex-wrap gap-1">
+                        {vendorClients(vendor.id).map((n) => (
+                          <span key={n} className="inline-flex items-center rounded-md bg-slate-100 px-1.5 py-0.5 text-xs">{n}</span>
+                        ))}
+                      </div>
+                    ) : "—"}
+                  </td>
                   <td className="px-4 py-3 text-sm text-slate-600">{vendorTypeConfig[vendor.vendor_type] || vendor.vendor_type}</td>
                   <td className="px-4 py-3 text-sm text-slate-600">{vendor.contact_name || "—"}</td>
                   <td className="px-4 py-3 text-sm text-slate-600">{vendor.phone || "—"}</td>
@@ -90,7 +109,7 @@ export default function MasterVendorList() {
               <div className="flex items-start justify-between gap-2 mb-2">
                 <div>
                   <div className="font-medium text-slate-900">{vendor.name}</div>
-                  <div className="text-xs text-slate-500 mt-0.5">{clientMap[vendor.client_id] || "Unassigned"}</div>
+                  <div className="text-xs text-slate-500 mt-0.5">{vendorClients(vendor.id).join(", ") || "Unassigned"}</div>
                 </div>
                 <VendorActionsMenu vendor={vendor} onEdit={() => handleEdit(vendor)} />
               </div>

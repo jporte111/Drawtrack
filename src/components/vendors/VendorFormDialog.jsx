@@ -111,7 +111,13 @@ export default function VendorFormDialog({ open, onOpenChange, vendor, clientId 
       if (isEdit) {
         await base44.entities.Vendor.update(vendor.id, form);
       } else {
-        await base44.entities.Vendor.create({ ...form, client_id: clientId || form.client_id });
+        const effectiveClientId = clientId || form.client_id;
+        const created = await base44.entities.Vendor.create({ ...form, client_id: effectiveClientId || null });
+        if (effectiveClientId) {
+          await base44.entities.ClientVendor.create({ client_id: effectiveClientId, vendor_id: created.id, status: "active" });
+          queryClient.invalidateQueries({ queryKey: ["clientVendors", effectiveClientId] });
+          queryClient.invalidateQueries({ queryKey: ["clientVendors", "all"] });
+        }
       }
       queryClient.invalidateQueries({ queryKey: ["vendors"] });
       onOpenChange(false);
