@@ -8,6 +8,7 @@ import StatusBadge from "@/components/StatusBadge";
 import { formatCurrency, formatDate } from "@/lib/format";
 import DrawFormDialog from "@/components/draws/DrawFormDialog";
 import OpenItemsSection from "@/components/draws/OpenItemsSection";
+import InvoiceLedger from "@/components/draws/InvoiceLedger";
 import VendorChecklist from "@/components/draws/VendorChecklist";
 import VoucherSection from "@/components/draws/VoucherSection";
 
@@ -51,6 +52,9 @@ export default function DrawDetail() {
 
       <div className="bg-slate-50 border rounded-xl p-4 md:p-5 mb-4">
         <OpenItemsSection drawId={id} />
+      </div>
+      <div className="bg-white border rounded-xl p-4 md:p-5 mb-4">
+        <InvoiceLedger drawId={id} />
       </div>
       <div className="bg-white border rounded-xl p-4 md:p-5 mb-4">
         <VendorChecklist drawId={id} />
