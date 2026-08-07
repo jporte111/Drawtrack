@@ -1,5 +1,4 @@
 {
-  "description": "Polls a Dropbox folder per client name every 30 minutes and imports new invoice files into each client's active draw cycle. Folder convention: <base_folder>/<client name>.",
   "definition": {
     "document": {
       "dsl": "1.0.0",
@@ -14,18 +13,20 @@
           "with": {
             "function_name": "dropboxIntake",
             "args": {
-              "folder_path": "/DrawTrack Invoices"
+              "folder_path": "/NAMASTE/CLIENTS"
             }
           },
           "then": "end",
           "x-base44": {
-            "title": "Poll Dropbox for invoices",
-            "description": "Folder per client name \u2192 active draw"
+            "title": "Poll Dropbox vendor folders",
+            "description": "Per client/project/vendor \u2192 draw cycle"
           }
         }
       }
     ]
   },
+  "name": "Dropbox Invoice Intake",
+  "description": "Polls each client's Dropbox folder every 30 minutes and imports invoice files from <client folder>/Clients/<project>/Vendors/<vendor>/ into the matching draw cycle. Base folder: /NAMASTE/CLIENTS.",
   "trigger": {
     "condition": null,
     "config": {
@@ -42,6 +43,5 @@
       "ends_on_date": null,
       "ends_after_count": null
     }
-  },
-  "name": "Dropbox Invoice Intake"
+  }
 }
