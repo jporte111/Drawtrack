@@ -5,6 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ExternalLink, FileText } from "lucide-react";
 import QboTrackingCell from "./QboTrackingCell";
 import UnconditionalLienDialog from "./UnconditionalLienDialog";
+import ConditionalLienDialog from "./ConditionalLienDialog";
 import { formatCurrency, formatDate } from "@/lib/format";
 
 const REVIEW_OPTIONS = ["needs_review", "approved", "needs_correction"];
@@ -18,6 +19,7 @@ const reviewBadge = {
 export default function InvoiceLedger({ drawId }) {
   const queryClient = useQueryClient();
   const [uncondTarget, setUncondTarget] = useState(null);
+  const [condTarget, setCondTarget] = useState(null);
 
   const { data: drawCycle } = useQuery({
     queryKey: ["drawCycle", drawId],
@@ -227,7 +229,12 @@ export default function InvoiceLedger({ drawId }) {
                         </td>
                         <td className="px-3 py-2.5 text-xs">
                           <div className="flex flex-col gap-0.5">
-                            <span className="flex items-center gap-1"><span className="text-slate-400 w-10">Cond</span>{lienLabel(inv.cond)}</span>
+                            <span className="flex items-center gap-1">
+                              <span className="text-slate-400 w-10">Cond</span>
+                              {inv.cond
+                                ? lienLabel(inv.cond)
+                                : <button onClick={() => setCondTarget(inv)} className="text-blue-600 hover:underline">Add</button>}
+                            </span>
                             <span className="flex items-center gap-1">
                               <span className="text-slate-400 w-10">Uncond</span>
                               {inv.uncond
@@ -268,6 +275,18 @@ export default function InvoiceLedger({ drawId }) {
           vendorName={uncondTarget.vendorName}
           projectName={drawCycle?.project_name}
           drawAmount={uncondTarget.vendorTotal}
+        />
+      )}
+      {condTarget && (
+        <ConditionalLienDialog
+          open
+          onOpenChange={(o) => !o && setCondTarget(null)}
+          drawVendorId={condTarget.draw_vendor_id}
+          invoiceId={condTarget.id}
+          existingDocId={condTarget.cond?.id}
+          vendorName={condTarget.vendorName}
+          projectName={drawCycle?.project_name}
+          drawAmount={condTarget.vendorTotal}
         />
       )}
     </div>
