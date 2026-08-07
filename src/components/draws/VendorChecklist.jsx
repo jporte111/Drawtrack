@@ -58,14 +58,15 @@ export default function VendorChecklist({ drawId }) {
     }, {});
 
   const renderConditionalCells = (docs) => {
-    if (!docs || docs.invoices.length === 0) {
+    const invoices = docs?.invoices || [];
+    if (invoices.length === 0) {
       const legacy = docs?.conditionalLegacy?.[0];
       return legacy ? <DocumentStatusCell doc={legacy} drawId={drawId} /> : <span className="text-xs text-slate-300">—</span>;
     }
     return (
       <div className="flex flex-col gap-0.5">
-        {docs.invoices.map((inv) => (
-          <DocumentStatusCell key={inv.id} doc={docs.conditionalByInvoice[inv.id]} drawId={drawId} />
+        {invoices.map((inv) => (
+          <DocumentStatusCell key={inv.id} doc={docs.conditionalByInvoice?.[inv.id]} drawId={drawId} />
         ))}
       </div>
     );
@@ -208,7 +209,7 @@ export default function VendorChecklist({ drawId }) {
                             <span>{formatCurrency(invoiceTotalByDV[dv.id] || 0)}</span>
                           )}
                         </td>
-                        <td className="px-2 py-2"><InvoiceStatusCell invoices={docs.invoices} drawId={drawId} /></td>
+                        <td className="px-2 py-2"><InvoiceStatusCell invoices={docs.invoices || []} drawId={drawId} /></td>
                         <td className="px-2 py-2">{renderConditionalCells(docs)}</td>
                         <td className="px-2 py-2"><DocumentStatusCell doc={docs.unconditional} drawId={drawId} /></td>
                         <td className="px-2 py-2">
@@ -296,7 +297,7 @@ export default function VendorChecklist({ drawId }) {
                   <div className="grid grid-cols-1 gap-2">
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-xs text-slate-500 shrink-0">Invoice</span>
-                      <div className="flex-1 min-w-0"><InvoiceStatusCell invoices={docs.invoices} drawId={drawId} /></div>
+                      <div className="flex-1 min-w-0"><InvoiceStatusCell invoices={docs.invoices || []} drawId={drawId} /></div>
                     </div>
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-xs text-slate-500 shrink-0">Cond. Release</span>
