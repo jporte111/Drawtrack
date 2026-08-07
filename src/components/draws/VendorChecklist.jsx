@@ -44,14 +44,32 @@ export default function VendorChecklist({ drawId }) {
   const docsByDV = allDocs
     .filter((d) => dvIds.has(d.draw_vendor_id))
     .reduce((acc, doc) => {
-      if (!acc[doc.draw_vendor_id]) acc[doc.draw_vendor_id] = { invoices: [] };
+      const entry = acc[doc.draw_vendor_id] || { invoices: [], conditionalByInvoice: {}, conditionalLegacy: [], unconditional: null };
       if (doc.document_type === "invoice" || doc.document_type === "receipt") {
-        acc[doc.draw_vendor_id].invoices.push(doc);
-      } else {
-        acc[doc.draw_vendor_id][doc.document_type] = doc;
+        entry.invoices.push(doc);
+      } else if (doc.document_type === "conditional_lien_release") {
+        if (doc.related_invoice_document_id) entry.conditionalByInvoice[doc.related_invoice_document_id] = doc;
+        else entry.conditionalLegacy.push(doc);
+      } else if (doc.document_type === "unconditional_lien_release") {
+        entry.unconditional = doc;
       }
+      acc[doc.draw_vendor_id] = entry;
       return acc;
     }, {});
+
+  const renderConditionalCells = (docs) => {
+    if (!docs || docs.invoices.length === 0) {
+      const legacy = docs?.conditionalLegacy?.[0];
+      return legacy ? <DocumentStatusCell doc={legacy} drawId={drawId} /> : <span className="text-xs text-slate-300">—</span>;
+    }
+    return (
+      <div className="flex flex-col gap-0.5">
+        {docs.invoices.map((inv) => (
+          <DocumentStatusCell key={inv.id} doc={docs.conditionalByInvoice[inv.id]} drawId={drawId} />
+        ))}
+      </div>
+    );
+  };
 
   const invoiceTotalByDV = drawVendors.reduce((acc, dv) => {
     const invoices = docsByDV[dv.id]?.invoices || [];
@@ -191,8 +209,8 @@ export default function VendorChecklist({ drawId }) {
                           )}
                         </td>
                         <td className="px-2 py-2"><InvoiceStatusCell invoices={docs.invoices} drawId={drawId} /></td>
-                        <td className="px-2 py-2"><DocumentStatusCell doc={docs.conditional_lien_release} drawId={drawId} /></td>
-                        <td className="px-2 py-2"><DocumentStatusCell doc={docs.unconditional_lien_release} drawId={drawId} /></td>
+                        <td className="px-2 py-2">{renderConditionalCells(docs)}</td>
+                        <td className="px-2 py-2"><DocumentStatusCell doc={docs.unconditional} drawId={drawId} /></td>
                         <td className="px-2 py-2">
                           <Select value={dv.status} onValueChange={(v) => handleDVStatusChange(dv.id, v)}>
                             <SelectTrigger className="h-7 text-xs w-36"><SelectValue /></SelectTrigger>
@@ -282,11 +300,11 @@ export default function VendorChecklist({ drawId }) {
                     </div>
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-xs text-slate-500 shrink-0">Cond. Release</span>
-                      <div className="flex-1 min-w-0"><DocumentStatusCell doc={docs.conditional_lien_release} drawId={drawId} /></div>
+                      <div className="flex-1 min-w-0">{renderConditionalCells(docs)}</div>
                     </div>
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-xs text-slate-500 shrink-0">Uncond. Release</span>
-                      <div className="flex-1 min-w-0"><DocumentStatusCell doc={docs.unconditional_lien_release} drawId={drawId} /></div>
+                      <div className="flex-1 min-w-0"><DocumentStatusCell doc={docs.unconditional} drawId={drawId} /></div>
                     </div>
                   </div>
                   <div className="flex items-center justify-between gap-2 pt-1 border-t">

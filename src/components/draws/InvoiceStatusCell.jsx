@@ -62,6 +62,7 @@ export default function InvoiceStatusCell({ invoices, drawId }) {
                   onClick={async () => {
                     try {
                       await base44.entities.Document.delete(inv.id);
+                      await base44.entities.Document.deleteMany({ related_invoice_document_id: inv.id, document_type: "conditional_lien_release" });
                     } catch (_e) {
                       // Document may have already been deleted — refresh anyway
                     }

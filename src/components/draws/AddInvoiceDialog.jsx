@@ -37,19 +37,31 @@ export default function AddInvoiceDialog({ open, onOpenChange, drawVendorId, dra
     e.preventDefault();
     setSaving(true);
     try {
-      const docsToCreate = invoices
-        .filter((inv) => inv.file_url || inv.amount)
-        .map((inv) => ({
-          draw_vendor_id: drawVendorId,
-          document_type: inv.doc_type || "invoice",
-          status: "complete",
-          file_url: inv.file_url || null,
-          amount: inv.amount ? Number(inv.amount) : null,
-          invoice_number: inv.invoice_number || null,
-          received_date: new Date().toISOString().split("T")[0],
-        }));
-      if (docsToCreate.length > 0) {
-        await base44.entities.Document.bulkCreate(docsToCreate);
+      const today = new Date().toISOString().split("T")[0];
+      const invoiceInputs = invoices.filter((inv) => inv.file_url || inv.amount);
+      const createdInvoices = [];
+      for (const inv of invoiceInputs) {
+        createdInvoices.push(
+          await base44.entities.Document.create({
+            draw_vendor_id: drawVendorId,
+            document_type: inv.doc_type || "invoice",
+            status: "complete",
+            file_url: inv.file_url || null,
+            amount: inv.amount ? Number(inv.amount) : null,
+            invoice_number: inv.invoice_number || null,
+            received_date: today,
+          })
+        );
+      }
+      if (createdInvoices.length > 0) {
+        await base44.entities.Document.bulkCreate(
+          createdInvoices.map((inv) => ({
+            draw_vendor_id: drawVendorId,
+            document_type: "conditional_lien_release",
+            status: "missing",
+            related_invoice_document_id: inv.id,
+          }))
+        );
       }
       queryClient.invalidateQueries({ queryKey: ["documents"] });
       onOpenChange(false);

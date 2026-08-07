@@ -145,27 +145,36 @@ export default function AddVendorDialog({ open, onOpenChange, drawId, clientId }
         status: "pending",
       });
 
-      const docsToCreate = [];
+      const today = new Date().toISOString().split("T")[0];
       const uploadedInvoices = invoices.filter((inv) => inv.file_url);
+      const createdInvoices = [];
       for (const inv of uploadedInvoices) {
-        docsToCreate.push({
-          draw_vendor_id: dv.id,
-          document_type: inv.doc_type || "invoice",
-          status: "complete",
-          file_url: inv.file_url,
-          amount: inv.amount ? Number(inv.amount) : null,
-          invoice_number: inv.invoice_number || null,
-          received_date: new Date().toISOString().split("T")[0],
-        });
+        createdInvoices.push(
+          await base44.entities.Document.create({
+            draw_vendor_id: dv.id,
+            document_type: inv.doc_type || "invoice",
+            status: "complete",
+            file_url: inv.file_url,
+            amount: inv.amount ? Number(inv.amount) : null,
+            invoice_number: inv.invoice_number || null,
+            received_date: today,
+          })
+        );
       }
+      let placeholderInvoice = null;
       if (uploadedInvoices.length === 0) {
-        docsToCreate.push({ draw_vendor_id: dv.id, document_type: "invoice", status: "missing" });
+        placeholderInvoice = await base44.entities.Document.create({ draw_vendor_id: dv.id, document_type: "invoice", status: "missing" });
       }
-      docsToCreate.push(
-        { draw_vendor_id: dv.id, document_type: "conditional_lien_release", status: "missing" },
-        { draw_vendor_id: dv.id, document_type: "unconditional_lien_release", status: "missing" }
+      const invoicesForConditionals = placeholderInvoice ? [placeholderInvoice] : createdInvoices;
+      await base44.entities.Document.bulkCreate(
+        invoicesForConditionals.map((inv) => ({
+          draw_vendor_id: dv.id,
+          document_type: "conditional_lien_release",
+          status: "missing",
+          related_invoice_document_id: inv.id,
+        }))
       );
-      await base44.entities.Document.bulkCreate(docsToCreate);
+      await base44.entities.Document.create({ draw_vendor_id: dv.id, document_type: "unconditional_lien_release", status: "missing" });
       queryClient.invalidateQueries({ queryKey: ["drawVendors", drawId] });
       queryClient.invalidateQueries({ queryKey: ["documents"] });
       onOpenChange(false);
