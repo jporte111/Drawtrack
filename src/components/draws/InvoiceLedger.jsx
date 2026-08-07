@@ -3,20 +3,15 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ExternalLink, FileText } from "lucide-react";
+import QboTrackingCell from "./QboTrackingCell";
 import { formatCurrency, formatDate } from "@/lib/format";
 
 const REVIEW_OPTIONS = ["needs_review", "approved", "needs_correction"];
-const QBO_OPTIONS = ["not_entered", "entered", "needs_review"];
 
 const reviewBadge = {
   approved: "bg-emerald-100 text-emerald-700",
   needs_review: "bg-amber-100 text-amber-700",
   needs_correction: "bg-red-100 text-red-700",
-};
-const qboBadge = {
-  not_entered: "bg-slate-100 text-slate-500",
-  entered: "bg-emerald-100 text-emerald-700",
-  needs_review: "bg-amber-100 text-amber-700",
 };
 
 export default function InvoiceLedger({ drawId }) {
@@ -55,11 +50,15 @@ export default function InvoiceLedger({ drawId }) {
     const invoices = drawDocs.filter(
       (d) => d.document_type === "invoice" || d.document_type === "receipt"
     );
-    // Lien releases keyed by draw_vendor_id
+    // Lien releases: conditional tied to invoice, unconditional one per vendor
+    const condByInvoice = {};
     const condByDV = {};
     const uncondByDV = {};
     for (const d of drawDocs) {
-      if (d.document_type === "conditional_lien_release") condByDV[d.draw_vendor_id] = d;
+      if (d.document_type === "conditional_lien_release") {
+        if (d.related_invoice_document_id) condByInvoice[d.related_invoice_document_id] = d;
+        else condByDV[d.draw_vendor_id] = d;
+      }
       if (d.document_type === "unconditional_lien_release") uncondByDV[d.draw_vendor_id] = d;
     }
 
@@ -74,7 +73,7 @@ export default function InvoiceLedger({ drawId }) {
         ...inv,
         vendorName: vendor?.name || "Unknown",
         drawVendor: dv,
-        cond: condByDV[inv.draw_vendor_id],
+        cond: condByInvoice[inv.id] || condByDV[inv.draw_vendor_id],
         uncond: uncondByDV[inv.draw_vendor_id],
       };
       if (catId && catMap.has(catId)) {
@@ -94,11 +93,12 @@ export default function InvoiceLedger({ drawId }) {
     const approvedTotal = invoices
       .filter((i) => i.review_status === "approved")
       .reduce((s, inv) => s + (inv.amount || 0), 0);
+    const enteredCount = invoices.filter((i) => i.qbo_status === "entered").length;
 
-    return { groupList, grandTotal, approvedTotal, hasUncategorized: uncategorized.invoices.length > 0 };
+    return { groupList, grandTotal, approvedTotal, hasUncategorized: uncategorized.invoices.length > 0, invoiceCount: invoices.length, enteredCount };
   }, [drawVendors, vendors, allDocs, budgetCategories]);
 
-  const { groupList, grandTotal, approvedTotal, hasUncategorized } = derived;
+  const { groupList, grandTotal, approvedTotal, hasUncategorized, invoiceCount, enteredCount } = derived;
 
   const updateDoc = async (docId, patch) => {
     await base44.entities.Document.update(docId, patch);
@@ -125,6 +125,8 @@ export default function InvoiceLedger({ drawId }) {
           <span className="font-semibold text-slate-900">{formatCurrency(grandTotal)}</span> total
           {" · "}
           <span className="text-emerald-600">{formatCurrency(approvedTotal)} approved</span>
+          {" · "}
+          <span className="text-slate-500">QBO {enteredCount}/{invoiceCount} entered</span>
         </div>
       </div>
 
@@ -193,16 +195,7 @@ export default function InvoiceLedger({ drawId }) {
                           </Select>
                         </td>
                         <td className="px-3 py-2.5">
-                          <Select value={inv.qbo_status || "not_entered"} onValueChange={(v) => updateDoc(inv.id, { qbo_status: v })}>
-                            <SelectTrigger className={`h-7 text-xs w-32 border-0 shadow-none focus:ring-1 font-medium ${qboBadge[inv.qbo_status] || qboBadge.not_entered}`}>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {QBO_OPTIONS.map((s) => (
-                                <SelectItem key={s} value={s}>{s.replace(/_/g, " ")}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <QboTrackingCell doc={inv} onUpdate={updateDoc} />
                         </td>
                         <td className="px-3 py-2.5 text-xs">
                           <div className="flex flex-col gap-0.5">
