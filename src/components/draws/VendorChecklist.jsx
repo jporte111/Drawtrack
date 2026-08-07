@@ -64,9 +64,27 @@ export default function VendorChecklist({ drawId }) {
       return legacy ? <DocumentStatusCell doc={legacy} drawId={drawId} /> : <span className="text-xs text-slate-300">—</span>;
     }
     return (
-      <div className="flex flex-col gap-0.5">
-        {invoices.map((inv) => (
-          <DocumentStatusCell key={inv.id} doc={docs.conditionalByInvoice?.[inv.id]} drawId={drawId} />
+      <div className="flex flex-col gap-1">
+        {invoices.map((inv, i) => (
+          <div key={inv.id} className="flex items-center gap-2 min-h-7">
+            <a
+              href={inv.file_url || "#"}
+              target={inv.file_url ? "_blank" : undefined}
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline max-w-[150px] shrink-0"
+              title={inv.file_url ? "View file" : "No file uploaded"}
+            >
+              <ExternalLink className="w-3 h-3 shrink-0" />
+              <span className="truncate">
+                {inv.invoice_number
+                  ? `${inv.document_type === "receipt" ? "Receipt" : "Inv."} ${inv.invoice_number}`
+                  : (inv.notes || `${inv.document_type === "receipt" ? "Receipt" : "Inv"} ${i + 1}`)}
+              </span>
+            </a>
+            <div className="flex-1 min-w-0">
+              <DocumentStatusCell doc={docs.conditionalByInvoice?.[inv.id]} drawId={drawId} />
+            </div>
+          </div>
         ))}
       </div>
     );
@@ -189,23 +207,6 @@ export default function VendorChecklist({ drawId }) {
                       <tr className="border-b last:border-0 hover:bg-slate-50">
                         <td className="px-2 py-2.5 font-medium text-slate-900 align-top">
                           {vendor?.name || "Unknown"}
-                          {docs.invoices && docs.invoices.length > 0 && (
-                            <div className="flex flex-col gap-0.5 mt-1">
-                              {docs.invoices.map((inv, i) => (
-                                <a
-                                  key={inv.id}
-                                  href={inv.file_url || "#"}
-                                  target={inv.file_url ? "_blank" : undefined}
-                                  rel="noopener noreferrer"
-                                  className="inline-flex items-center gap-1 text-xs text-slate-400 hover:text-slate-700 max-w-[180px] truncate"
-                                  title={inv.file_url ? "View file" : "No file uploaded"}
-                                >
-                                  <ExternalLink className="w-3 h-3 shrink-0" />
-                                  <span className="truncate">{inv.invoice_number ? `${inv.document_type === "receipt" ? "Receipt" : "Inv."} ${inv.invoice_number}` : (inv.notes || `${inv.document_type === "receipt" ? "Receipt" : "Inv"} ${i + 1}`)}</span>
-                                </a>
-                              ))}
-                            </div>
-                          )}
                           {dv.notes && (
                             <Popover>
                               <PopoverTrigger asChild>
