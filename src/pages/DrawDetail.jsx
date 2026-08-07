@@ -1,11 +1,17 @@
 import React, { useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, Pencil } from "lucide-react";
+import { ChevronLeft, Pencil, Send } from "lucide-react";
 import StatusBadge from "@/components/StatusBadge";
 import { formatCurrency, formatDate } from "@/lib/format";
+import { useToast } from "@/components/ui/use-toast";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import DrawFormDialog from "@/components/draws/DrawFormDialog";
 import OpenItemsSection from "@/components/draws/OpenItemsSection";
 import InvoiceLedger from "@/components/draws/InvoiceLedger";
@@ -15,6 +21,27 @@ import VoucherSection from "@/components/draws/VoucherSection";
 export default function DrawDetail() {
   const { id } = useParams();
   const [editOpen, setEditOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const handleSubmitDraw = async () => {
+    setSubmitting(true);
+    try {
+      const res = await base44.functions.invoke("submitDraw", { draw_cycle_id: id });
+      toast({
+        title: "Draw submitted",
+        description: res.data?.submittedName ? `Renamed to "${res.data.submittedName}"` : "Next draw created",
+      });
+      queryClient.invalidateQueries({ queryKey: ["draw", id] });
+      queryClient.invalidateQueries({ queryKey: ["draws"] });
+      queryClient.invalidateQueries({ queryKey: ["drawCycle", id] });
+    } catch (e) {
+      toast({ variant: "destructive", title: "Submit failed", description: e.message });
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const { data: draw, isLoading } = useQuery({
     queryKey: ["draw", id],
@@ -45,9 +72,32 @@ export default function DrawDetail() {
             <span>Amount: {formatCurrency(draw.amount)}</span>
           </div>
         </div>
-        <Button variant="outline" size="sm" onClick={() => setEditOpen(true)} className="shrink-0">
-          <Pencil className="w-3.5 h-3.5 mr-1.5" />Edit
-        </Button>
+        <div className="flex items-center gap-2 shrink-0">
+          {(draw.status === "draft" || draw.status === "in_progress") && (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button size="sm" disabled={submitting}>
+                  <Send className="w-3.5 h-3.5 mr-1.5" />{submitting ? "Submitting..." : "Submit Draw"}
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Submit this draw?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This renames the draw by its date, marks it submitted, and creates the next "Next Draw" for this project.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleSubmitDraw}>Submit</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
+          <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
+            <Pencil className="w-3.5 h-3.5 mr-1.5" />Edit
+          </Button>
+        </div>
       </div>
 
       <div className="bg-slate-50 border rounded-xl p-4 md:p-5 mb-4">
