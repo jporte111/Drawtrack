@@ -48,12 +48,11 @@
     }
   },
   "required": [
-    "name",
-    "client_id"
+    "name"
   ],
   "rls": {
     "create": null,
-    "read": {},
+    "read": true,
     "update": {
       "$or": [
         {
