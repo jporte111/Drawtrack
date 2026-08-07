@@ -1,0 +1,47 @@
+{
+  "name": "Dropbox Invoice Intake",
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "dropbox_invoice_intake",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "intake": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "dropboxIntake",
+            "args": {
+              "folder_path": "/DrawTrack Invoices"
+            }
+          },
+          "then": "end",
+          "x-base44": {
+            "title": "Poll Dropbox for invoices",
+            "description": "Import new files into the active draw"
+          }
+        }
+      }
+    ]
+  },
+  "trigger": {
+    "condition": null,
+    "config": {
+      "trigger_type": "scheduled",
+      "events": [],
+      "schedule_mode": "recurring",
+      "cron_expression": "*/30 * * * *",
+      "one_time_date": null,
+      "timezone": "America/New_York",
+      "interval_value": null,
+      "interval_unit": null,
+      "interval_anchor": null,
+      "ends_type": "never",
+      "ends_on_date": null,
+      "ends_after_count": null
+    }
+  },
+  "description": "Polls a Dropbox folder every 30 minutes and imports new invoice files into the active draw cycle for the first client."
+}
