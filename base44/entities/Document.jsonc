@@ -5,6 +5,9 @@
     "draw_vendor_id": {
       "type": "string"
     },
+    "client_vendor_id": {
+      "type": "string"
+    },
     "document_type": {
       "type": "string",
       "enum": [
@@ -87,7 +90,6 @@
     }
   },
   "required": [
-    "draw_vendor_id",
     "document_type"
   ],
   "rls": {

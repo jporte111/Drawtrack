@@ -1,9 +1,10 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ExternalLink, FileText } from "lucide-react";
 import QboTrackingCell from "./QboTrackingCell";
+import UnconditionalLienDialog from "./UnconditionalLienDialog";
 import { formatCurrency, formatDate } from "@/lib/format";
 
 const REVIEW_OPTIONS = ["needs_review", "approved", "needs_correction"];
@@ -16,6 +17,7 @@ const reviewBadge = {
 
 export default function InvoiceLedger({ drawId }) {
   const queryClient = useQueryClient();
+  const [uncondTarget, setUncondTarget] = useState(null);
 
   const { data: drawCycle } = useQuery({
     queryKey: ["drawCycle", drawId],
@@ -38,10 +40,16 @@ export default function InvoiceLedger({ drawId }) {
     queryFn: () => base44.entities.BudgetCategory.filter({ client_id: drawCycle.client_id }),
     enabled: !!drawCycle?.client_id,
   });
+  const { data: clientVendors = [] } = useQuery({
+    queryKey: ["clientVendors", drawCycle?.client_id],
+    queryFn: () => base44.entities.ClientVendor.filter({ client_id: drawCycle.client_id }),
+    enabled: !!drawCycle?.client_id,
+  });
 
   const derived = useMemo(() => {
     const vendorMap = new Map(vendors.map((v) => [v.id, v]));
     const catMap = new Map(budgetCategories.map((c) => [c.id, c]));
+    const cvByVendor = new Map(clientVendors.map((cv) => [cv.vendor_id, cv.id]));
     const dvIds = new Set(drawVendors.map((dv) => dv.id));
     const dvById = new Map(drawVendors.map((dv) => [dv.id, dv]));
 
@@ -50,31 +58,45 @@ export default function InvoiceLedger({ drawId }) {
     const invoices = drawDocs.filter(
       (d) => d.document_type === "invoice" || d.document_type === "receipt"
     );
-    // Lien releases: conditional tied to invoice, unconditional one per vendor
+    // Conditional: tied to invoice via related_invoice_document_id, else per draw vendor
     const condByInvoice = {};
     const condByDV = {};
-    const uncondByDV = {};
     for (const d of drawDocs) {
       if (d.document_type === "conditional_lien_release") {
         if (d.related_invoice_document_id) condByInvoice[d.related_invoice_document_id] = d;
         else condByDV[d.draw_vendor_id] = d;
       }
-      if (d.document_type === "unconditional_lien_release") uncondByDV[d.draw_vendor_id] = d;
+    }
+    // Unconditional: per vendor-per-client (keyed by client_vendor_id)
+    const uncondByCV = {};
+    for (const d of allDocs) {
+      if (d.document_type === "unconditional_lien_release" && d.client_vendor_id) {
+        uncondByCV[d.client_vendor_id] = d;
+      }
+    }
+
+    // Per-vendor invoice totals (for lien release amount)
+    const vendorTotals = {};
+    for (const inv of invoices) {
+      const vid = dvById.get(inv.draw_vendor_id)?.vendor_id;
+      if (vid) vendorTotals[vid] = (vendorTotals[vid] || 0) + (inv.amount || 0);
     }
 
     // Group invoices by budget category
-    const groups = {}; // catId -> { name, sortOrder, invoices: [] }
+    const groups = {};
     const uncategorized = { name: "Uncategorized", sortOrder: 9999, invoices: [] };
     for (const inv of invoices) {
       const dv = dvById.get(inv.draw_vendor_id);
       const catId = dv?.budget_category_id;
       const vendor = vendorMap.get(dv?.vendor_id);
+      const cvId = cvByVendor.get(dv?.vendor_id);
       const row = {
         ...inv,
         vendorName: vendor?.name || "Unknown",
-        drawVendor: dv,
+        clientVendorId: cvId,
+        vendorTotal: vendorTotals[vendor?.id] || 0,
         cond: condByInvoice[inv.id] || condByDV[inv.draw_vendor_id],
-        uncond: uncondByDV[inv.draw_vendor_id],
+        uncond: cvId ? uncondByCV[cvId] : undefined,
       };
       if (catId && catMap.has(catId)) {
         if (!groups[catId]) {
@@ -96,7 +118,7 @@ export default function InvoiceLedger({ drawId }) {
     const enteredCount = invoices.filter((i) => i.qbo_status === "entered").length;
 
     return { groupList, grandTotal, approvedTotal, hasUncategorized: uncategorized.invoices.length > 0, invoiceCount: invoices.length, enteredCount };
-  }, [drawVendors, vendors, allDocs, budgetCategories]);
+  }, [drawVendors, vendors, allDocs, budgetCategories, clientVendors]);
 
   const { groupList, grandTotal, approvedTotal, hasUncategorized, invoiceCount, enteredCount } = derived;
 
@@ -107,9 +129,15 @@ export default function InvoiceLedger({ drawId }) {
 
   const lienLabel = (doc) =>
     doc ? (
-      <span className="text-emerald-600 font-medium" title={doc.status?.replace(/_/g, " ")}>
-        {doc.status === "complete" ? "✓" : doc.status?.replace(/_/g, " ").slice(0, 6) || "✓"}
-      </span>
+      <a
+        href={doc.file_url || "#"}
+        target={doc.file_url ? "_blank" : undefined}
+        rel="noopener noreferrer"
+        className="text-emerald-600 font-medium hover:underline"
+        title={doc.status?.replace(/_/g, " ")}
+      >
+        {doc.status === "complete" ? "✓ Signed" : doc.status?.replace(/_/g, " ").slice(0, 12) || "✓"}
+      </a>
     ) : (
       <span className="text-slate-300">—</span>
     );
@@ -200,7 +228,14 @@ export default function InvoiceLedger({ drawId }) {
                         <td className="px-3 py-2.5 text-xs">
                           <div className="flex flex-col gap-0.5">
                             <span className="flex items-center gap-1"><span className="text-slate-400 w-10">Cond</span>{lienLabel(inv.cond)}</span>
-                            <span className="flex items-center gap-1"><span className="text-slate-400 w-10">Uncond</span>{lienLabel(inv.uncond)}</span>
+                            <span className="flex items-center gap-1">
+                              <span className="text-slate-400 w-10">Uncond</span>
+                              {inv.uncond
+                                ? lienLabel(inv.uncond)
+                                : inv.clientVendorId
+                                  ? <button onClick={() => setUncondTarget(inv)} className="text-blue-600 hover:underline">Add</button>
+                                  : <span className="text-slate-300" title="No client-vendor link">—</span>}
+                            </span>
                           </div>
                         </td>
                         <td className="px-3 py-2.5 text-xs text-slate-500">
@@ -223,6 +258,17 @@ export default function InvoiceLedger({ drawId }) {
             </tfoot>
           </table>
         </div>
+      )}
+
+      {uncondTarget && (
+        <UnconditionalLienDialog
+          open
+          onOpenChange={(o) => !o && setUncondTarget(null)}
+          clientVendorId={uncondTarget.clientVendorId}
+          vendorName={uncondTarget.vendorName}
+          projectName={drawCycle?.project_name}
+          drawAmount={uncondTarget.vendorTotal}
+        />
       )}
     </div>
   );

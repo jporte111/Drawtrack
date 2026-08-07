@@ -14,7 +14,7 @@ export default function DrawFormDialog({ open, onOpenChange, draw, clientId }) {
   const isEdit = !!draw;
   const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({ name: "", project_name: "", status: "in_progress", draw_date: "", amount: "", description: "" });
+  const [form, setForm] = useState({ name: "", project_name: "", status: "in_progress", draw_date: "", amount: "", description: "", lender_current_payment_due: "", application_cert_url: "", continuation_sheet_url: "" });
 
   useEffect(() => {
     if (draw) {
@@ -25,16 +25,19 @@ export default function DrawFormDialog({ open, onOpenChange, draw, clientId }) {
         draw_date: draw.draw_date ? draw.draw_date.split("T")[0] : "",
         amount: draw.amount ?? "",
         description: draw.description || "",
+        lender_current_payment_due: draw.lender_current_payment_due ?? "",
+        application_cert_url: draw.application_cert_url || "",
+        continuation_sheet_url: draw.continuation_sheet_url || "",
       });
     } else {
-      setForm({ name: "", project_name: "", status: "in_progress", draw_date: "", amount: "", description: "" });
+      setForm({ name: "", project_name: "", status: "in_progress", draw_date: "", amount: "", description: "", lender_current_payment_due: "", application_cert_url: "", continuation_sheet_url: "" });
     }
   }, [draw, open]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
-    const payload = { ...form, amount: form.amount ? Number(form.amount) : null };
+    const payload = { ...form, amount: form.amount ? Number(form.amount) : null, lender_current_payment_due: form.lender_current_payment_due ? Number(form.lender_current_payment_due) : null };
     try {
       if (isEdit) {
         await base44.entities.DrawCycle.update(draw.id, payload);
@@ -88,6 +91,20 @@ export default function DrawFormDialog({ open, onOpenChange, draw, clientId }) {
           <div className="space-y-1.5">
             <Label>Description</Label>
             <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={3} />
+          </div>
+          <div className="border-t pt-4 space-y-4">
+            <div className="space-y-1.5">
+              <Label>Lender Current Payment Due ($)</Label>
+              <Input type="number" value={form.lender_current_payment_due} onChange={(e) => setForm({ ...form, lender_current_payment_due: e.target.value })} placeholder="0" />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Application Cert URL (AIA G702)</Label>
+              <Input value={form.application_cert_url} onChange={(e) => setForm({ ...form, application_cert_url: e.target.value })} placeholder="https://..." />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Continuation Sheet URL (AIA G703)</Label>
+              <Input value={form.continuation_sheet_url} onChange={(e) => setForm({ ...form, continuation_sheet_url: e.target.value })} placeholder="https://..." />
+            </div>
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
