@@ -25,15 +25,14 @@
       }
     ]
   },
-  "name": "Dropbox Invoice Intake",
-  "description": "Polls each client's Dropbox folder every 30 minutes and imports invoice files from <client folder>/Clients/<project>/Vendors/<vendor>/ into the matching draw cycle. Base folder: /NAMASTE/CLIENTS.",
+  "description": "Polls each client's Dropbox folder every hour and imports invoice files from <client folder>/Clients/<project>/Vendors/<vendor>/ into the matching draw cycle. Base folder: /NAMASTE/CLIENTS.",
   "trigger": {
     "condition": null,
     "config": {
       "trigger_type": "scheduled",
       "events": [],
       "schedule_mode": "recurring",
-      "cron_expression": "*/30 * * * *",
+      "cron_expression": "0 * * * *",
       "one_time_date": null,
       "timezone": "America/New_York",
       "interval_value": null,
@@ -43,5 +42,6 @@
       "ends_on_date": null,
       "ends_after_count": null
     }
-  }
+  },
+  "name": "Dropbox Invoice Intake"
 }
