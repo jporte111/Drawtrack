@@ -42,7 +42,7 @@ export default function DrawList() {
     { label: "Total Draws", value: draws.length, icon: ClipboardList },
     { label: "Active", value: activeDraws, icon: FolderOpen },
     { label: "Total Value", value: formatCurrency(totalAmount), icon: DollarSign },
-    { label: "Open Items", value: activeItems, icon: FileWarning },
+    { label: "Pending Items", value: activeItems, icon: FileWarning },
   ];
 
   return (
@@ -80,7 +80,7 @@ export default function DrawList() {
               <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Status</th>
               <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Date</th>
               <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide text-right">Amount</th>
-              <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide text-center">Open Items</th>
+              <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide text-center">Pending Items</th>
               <th className="px-4 py-3"></th>
             </tr>
           </thead>
@@ -142,7 +142,7 @@ export default function DrawList() {
               </div>
               {openByDraw[draw.id] > 0 && (
                 <div className="mt-2">
-                  <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-amber-100 text-amber-700 text-xs font-semibold">{openByDraw[draw.id]} open items</span>
+                  <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-amber-100 text-amber-700 text-xs font-semibold">{openByDraw[draw.id]} pending items</span>
                 </div>
               )}
             </div>

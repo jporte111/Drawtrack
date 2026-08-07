@@ -111,7 +111,7 @@ export default function OpenItemsSection({ drawId }) {
     <div>
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h2 className="text-lg font-semibold text-slate-900">Open Items</h2>
+          <h2 className="text-lg font-semibold text-slate-900">Pending Items</h2>
           <p className="text-sm text-slate-500">
             {unresolved.length} active {unresolved.length === 1 ? "item" : "items"} across {vendorGroups.length}{" "}
             {vendorGroups.length === 1 ? "vendor" : "vendors"}
@@ -123,7 +123,7 @@ export default function OpenItemsSection({ drawId }) {
       </div>
       {vendorGroups.length === 0 ? (
         <div className="text-center py-8 text-slate-400 border border-dashed rounded-lg">
-          No open items for this draw.
+          No pending items for this draw.
         </div>
       ) : (
         <div className="space-y-2">

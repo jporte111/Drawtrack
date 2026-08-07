@@ -2,11 +2,10 @@ import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
-import { Plus, ClipboardList, Users, Building2, DollarSign } from "lucide-react";
+import { Plus, ClipboardList, Users, Building2, DollarSign, FileWarning } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ClientFormDialog from "@/components/clients/ClientFormDialog";
 import ClientActionsMenu from "@/components/clients/ClientActionsMenu";
-import ActionCenter from "@/components/dashboard/ActionCenter";
 
 export default function ClientList() {
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -20,17 +19,24 @@ export default function ClientList() {
     queryKey: ["draws"],
     queryFn: () => base44.entities.DrawCycle.list(),
   });
-  const { data: vendors = [] } = useQuery({
-    queryKey: ["vendors"],
-    queryFn: () => base44.entities.Vendor.list(),
+  const { data: openItems = [] } = useQuery({
+    queryKey: ["openItems", "all"],
+    queryFn: () => base44.entities.OpenItem.list(null, 500),
   });
 
-  const drawsByClient = draws.reduce((acc, d) => {
-    if (d.client_id) acc[d.client_id] = (acc[d.client_id] || 0) + 1;
+  const ACTIVE = ["draft", "in_progress", "submitted", "under_review"];
+  const activeDrawByClient = draws.reduce((acc, d) => {
+    const cur = acc[d.client_id];
+    const isMoreRecent = !cur || new Date(d.created_date) > new Date(cur.created_date);
+    if (d.client_id && isMoreRecent && (ACTIVE.includes(d.status) || !cur)) {
+      acc[d.client_id] = d;
+    }
     return acc;
   }, {});
-  const vendorsByClient = vendors.reduce((acc, v) => {
-    if (v.client_id) acc[v.client_id] = (acc[v.client_id] || 0) + 1;
+  const pendingByClient = openItems.reduce((acc, i) => {
+    if (i.client_id && (i.status === "open" || i.status === "in_progress")) {
+      acc[i.client_id] = (acc[i.client_id] || 0) + 1;
+    }
     return acc;
   }, {});
 
@@ -53,8 +59,6 @@ export default function ClientList() {
         </div>
         <Button onClick={() => setDialogOpen(true)} className="shrink-0"><Plus className="w-4 h-4 mr-1.5" />New Client</Button>
       </div>
-
-      <ActionCenter />
 
       {isLoading ? (
         <div className="text-center py-12 text-slate-400">Loading...</div>
@@ -79,16 +83,27 @@ export default function ClientList() {
                 </div>
                 <ClientActionsMenu client={client} onEdit={handleEdit} />
               </div>
-              <div className="grid grid-cols-2 gap-3 mb-4">
-                <div className="text-center bg-slate-50 rounded-lg py-2">
-                  <div className="text-lg font-bold text-slate-900">{drawsByClient[client.id] || 0}</div>
-                  <div className="text-xs text-slate-500">Draws</div>
-                </div>
-                <div className="text-center bg-slate-50 rounded-lg py-2">
-                  <div className="text-lg font-bold text-slate-900">{vendorsByClient[client.id] || 0}</div>
-                  <div className="text-xs text-slate-500">Vendors</div>
-                </div>
-              </div>
+              {(() => {
+                const active = activeDrawByClient[client.id];
+                const pending = pendingByClient[client.id] || 0;
+                return (
+                  <div className="mb-4">
+                    <div className="text-xs text-slate-500 mb-1">Active Draw</div>
+                    {active ? (
+                      <Link to={`/draws/${active.id}`} className="block font-medium text-slate-900 hover:text-blue-600 truncate">
+                        {active.name}
+                      </Link>
+                    ) : (
+                      <div className="text-sm text-slate-400">No active draw</div>
+                    )}
+                    {pending > 0 && (
+                      <Link to={active ? `/draws/${active.id}` : `/clients/${client.id}/draws`} className="inline-flex items-center gap-1 mt-2 text-xs font-medium text-amber-600 hover:text-amber-700">
+                        <FileWarning className="w-3.5 h-3.5" />{pending} pending item{pending === 1 ? "" : "s"}
+                      </Link>
+                    )}
+                  </div>
+                );
+              })()}
               <div className="grid grid-cols-3 gap-1.5 mt-auto">
                 <Link to={`/clients/${client.id}/draws`}>
                   <Button variant="outline" size="sm" className="w-full px-2 gap-1 text-xs">
