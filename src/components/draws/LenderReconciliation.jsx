@@ -2,12 +2,14 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { AlertTriangle, CheckCircle2, ExternalLink } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
 
 export default function LenderReconciliation({ drawId }) {
   const queryClient = useQueryClient();
   const [savingField, setSavingField] = useState(null);
+  const [lenderDraft, setLenderDraft] = useState("");
 
   const { data: draw } = useQuery({
     queryKey: ["draw", drawId],
@@ -22,18 +24,28 @@ export default function LenderReconciliation({ drawId }) {
     queryFn: () => base44.entities.Document.list(),
   });
 
-  const base44Total = useMemo(() => {
+  const { base44Total, approvedTotal } = useMemo(() => {
     const dvIds = new Set(drawVendors.map((d) => d.id));
-    return allDocs
-      .filter(
-        (d) =>
-          dvIds.has(d.draw_vendor_id) &&
-          (d.document_type === "invoice" || d.document_type === "receipt")
-      )
-      .reduce((s, d) => s + (d.amount || 0), 0);
+    const drawInvoices = allDocs.filter(
+      (d) =>
+        dvIds.has(d.draw_vendor_id) &&
+        (d.document_type === "invoice" || d.document_type === "receipt")
+    );
+    return {
+      base44Total: drawInvoices.reduce((s, d) => s + (d.amount || 0), 0),
+      approvedTotal: drawInvoices
+        .filter((d) => d.review_status === "approved")
+        .reduce((s, d) => s + (d.amount || 0), 0),
+    };
   }, [drawVendors, allDocs]);
 
   const lenderDue = draw?.lender_current_payment_due ?? null;
+
+  // Keep the input draft in sync with the saved value (e.g. after refetch or edits elsewhere)
+  useEffect(() => {
+    setLenderDraft(lenderDue == null ? "" : String(lenderDue));
+  }, [lenderDue]);
+
   const hasMismatch =
     lenderDue != null && Math.abs((lenderDue || 0) - base44Total) > 0.005;
   const difference = lenderDue != null ? (lenderDue || 0) - base44Total : 0;
@@ -50,6 +62,18 @@ export default function LenderReconciliation({ drawId }) {
     }
   };
 
+  const commitLender = () => {
+    const trimmed = lenderDraft.trim();
+    if (trimmed === "" || trimmed === String(lenderDue ?? "")) return;
+    const num = Number(trimmed);
+    updateDraw({ lender_current_payment_due: isNaN(num) ? null : num });
+  };
+
+  const useApproved = () => {
+    setLenderDraft(String(approvedTotal));
+    updateDraw({ lender_current_payment_due: approvedTotal });
+  };
+
   return (
     <div>
       <div className="mb-3">
@@ -61,18 +85,31 @@ export default function LenderReconciliation({ drawId }) {
         <div className="rounded-lg border p-3">
           <div className="text-xs text-slate-500 mb-1">Base44 Invoice Total</div>
           <div className="text-xl font-bold text-slate-900 tabular-nums">{formatCurrency(base44Total)}</div>
+          <div className="text-xs text-emerald-600 mt-1">{formatCurrency(approvedTotal)} approved</div>
         </div>
         <div className="rounded-lg border p-3">
-          <div className="text-xs text-slate-500 mb-1">Lender Current Payment Due</div>
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-xs text-slate-500">Lender Current Payment Due</span>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 px-2 text-xs"
+              onClick={useApproved}
+              disabled={!!savingField}
+              title="Set to the approved invoice total"
+            >
+              Use approved
+            </Button>
+          </div>
           <Input
             type="number"
-            value={lenderDue ?? ""}
+            value={lenderDraft}
             placeholder="Enter lender amount"
-            onChange={(e) =>
-              updateDraw({
-                lender_current_payment_due: e.target.value ? Number(e.target.value) : null,
-              })
-            }
+            onChange={(e) => setLenderDraft(e.target.value)}
+            onBlur={commitLender}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") e.currentTarget.blur();
+            }}
             disabled={!!savingField}
             className="text-xl font-bold tabular-nums h-9"
           />
