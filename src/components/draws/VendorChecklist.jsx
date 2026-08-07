@@ -88,6 +88,29 @@ export default function VendorChecklist({ drawId }) {
     });
   }, [invoiceTotalByDV]);
 
+  // Backfill a "missing" conditional lien release for any invoice lacking one
+  useEffect(() => {
+    const missing = [];
+    drawVendors.forEach((dv) => {
+      const docs = docsByDV[dv.id];
+      if (!docs) return;
+      (docs.invoices || []).forEach((inv) => {
+        if (!docs.conditionalByInvoice?.[inv.id]) {
+          missing.push({ draw_vendor_id: dv.id, related_invoice_document_id: inv.id });
+        }
+      });
+    });
+    if (missing.length === 0) return;
+    base44.entities.Document.bulkCreate(
+      missing.map((m) => ({
+        draw_vendor_id: m.draw_vendor_id,
+        document_type: "conditional_lien_release",
+        status: "missing",
+        related_invoice_document_id: m.related_invoice_document_id,
+      }))
+    ).then(() => queryClient.invalidateQueries({ queryKey: ["documents"] }));
+  }, [drawVendors, allDocs]);
+
   const handleDVStatusChange = async (dvId, status) => {
     await base44.entities.DrawVendor.update(dvId, { status });
     queryClient.invalidateQueries({ queryKey: ["drawVendors", drawId] });
