@@ -231,7 +231,7 @@ export default function InvoiceLedger({ drawId }) {
                           <div className="flex flex-col gap-0.5">
                             <span className="flex items-center gap-1">
                               <span className="text-slate-400 w-10">Cond</span>
-                              {inv.cond
+                              {inv.cond?.file_url
                                 ? lienLabel(inv.cond)
                                 : <button onClick={() => setCondTarget(inv)} className="text-blue-600 hover:underline">Add</button>}
                             </span>
