@@ -1,5 +1,5 @@
 {
-  "name": "Dropbox Invoice Intake",
+  "description": "Polls a Dropbox folder per client name every 30 minutes and imports new invoice files into each client's active draw cycle. Folder convention: <base_folder>/<client name>.",
   "definition": {
     "document": {
       "dsl": "1.0.0",
@@ -20,7 +20,7 @@
           "then": "end",
           "x-base44": {
             "title": "Poll Dropbox for invoices",
-            "description": "Import new files into the active draw"
+            "description": "Folder per client name \u2192 active draw"
           }
         }
       }
@@ -43,5 +43,5 @@
       "ends_after_count": null
     }
   },
-  "description": "Polls a Dropbox folder every 30 minutes and imports new invoice files into the active draw cycle for the first client."
+  "name": "Dropbox Invoice Intake"
 }
