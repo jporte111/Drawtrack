@@ -35,9 +35,52 @@
     "invoice_number": {
       "type": "string"
     },
+    "invoice_date": {
+      "type": "string",
+      "format": "date"
+    },
     "received_date": {
       "type": "string",
       "format": "date"
+    },
+    "review_status": {
+      "type": "string",
+      "enum": [
+        "needs_review",
+        "approved",
+        "needs_correction"
+      ],
+      "default": "approved"
+    },
+    "related_invoice_document_id": {
+      "type": "string"
+    },
+    "qbo_status": {
+      "type": "string",
+      "enum": [
+        "not_entered",
+        "entered",
+        "needs_review"
+      ],
+      "default": "not_entered"
+    },
+    "qbo_bill_id": {
+      "type": "string"
+    },
+    "qbo_entry_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "qbo_notes": {
+      "type": "string"
+    },
+    "source": {
+      "type": "string",
+      "enum": [
+        "manual",
+        "dropbox"
+      ],
+      "default": "manual"
     },
     "notes": {
       "type": "string"

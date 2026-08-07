@@ -11,6 +11,9 @@
     "scope_of_work": {
       "type": "string"
     },
+    "budget_category_id": {
+      "type": "string"
+    },
     "amount": {
       "type": "number"
     },
