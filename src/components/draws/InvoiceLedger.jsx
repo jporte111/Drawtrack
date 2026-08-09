@@ -1,25 +1,27 @@
 import React, { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
+import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ExternalLink, FileText } from "lucide-react";
-import QboTrackingCell from "./QboTrackingCell";
-import UnconditionalLienDialog from "./UnconditionalLienDialog";
-import ConditionalLienDialog from "./ConditionalLienDialog";
+import { Plus, FileText, ExternalLink } from "lucide-react";
+import DocStatusButton from "./DocStatusButton";
+import AddVendorDialog from "./AddVendorDialog";
+import AddInvoiceDialog from "./AddInvoiceDialog";
+import EditableAmount from "./EditableAmount";
 import { formatCurrency, formatDate } from "@/lib/format";
 
-const REVIEW_OPTIONS = ["needs_review", "approved", "needs_correction"];
-
-const reviewBadge = {
-  approved: "bg-emerald-100 text-emerald-700",
-  needs_review: "bg-amber-100 text-amber-700",
-  needs_correction: "bg-red-100 text-red-700",
-};
+const RECIPIENTS = [
+  { value: "vendor", label: "Vendor" },
+  { value: "jlm", label: "JLM" },
+  { value: "mike", label: "Mike" },
+  { value: "jose", label: "Jose" },
+];
 
 export default function InvoiceLedger({ drawId }) {
   const queryClient = useQueryClient();
-  const [uncondTarget, setUncondTarget] = useState(null);
-  const [condTarget, setCondTarget] = useState(null);
+  const [addVendorOpen, setAddVendorOpen] = useState(false);
+  const [addInvoiceOpen, setAddInvoiceOpen] = useState(false);
+  const [addInvoiceDVId, setAddInvoiceDVId] = useState(null);
 
   const { data: drawCycle } = useQuery({
     queryKey: ["drawCycle", drawId],
@@ -53,242 +55,252 @@ export default function InvoiceLedger({ drawId }) {
     const catMap = new Map(budgetCategories.map((c) => [c.id, c]));
     const cvByVendor = new Map(clientVendors.map((cv) => [cv.vendor_id, cv.id]));
     const dvIds = new Set(drawVendors.map((dv) => dv.id));
-    const dvById = new Map(drawVendors.map((dv) => [dv.id, dv]));
 
-    // Invoices + lien releases for this draw's draw vendors
     const drawDocs = allDocs.filter((d) => dvIds.has(d.draw_vendor_id));
-    const invoices = drawDocs.filter(
-      (d) => d.document_type === "invoice" || d.document_type === "receipt"
-    );
-    // Conditional: tied to invoice via related_invoice_document_id, else per draw vendor
+    const invoicesByDV = {};
     const condByInvoice = {};
     const condByDV = {};
+    const uncondByCV = {};
     for (const d of drawDocs) {
-      if (d.document_type === "conditional_lien_release") {
+      if (d.document_type === "invoice" || d.document_type === "receipt") {
+        (invoicesByDV[d.draw_vendor_id] ||= []).push(d);
+      } else if (d.document_type === "conditional_lien_release") {
         if (d.related_invoice_document_id) condByInvoice[d.related_invoice_document_id] = d;
         else condByDV[d.draw_vendor_id] = d;
-      }
-    }
-    // Unconditional: per vendor-per-client (keyed by client_vendor_id)
-    const uncondByCV = {};
-    for (const d of allDocs) {
-      if (d.document_type === "unconditional_lien_release" && d.client_vendor_id) {
+      } else if (d.document_type === "unconditional_lien_release" && d.client_vendor_id) {
         uncondByCV[d.client_vendor_id] = d;
       }
     }
 
-    // Per-vendor invoice totals (for lien release amount)
-    const vendorTotals = {};
-    for (const inv of invoices) {
-      const vid = dvById.get(inv.draw_vendor_id)?.vendor_id;
-      if (vid) vendorTotals[vid] = (vendorTotals[vid] || 0) + (inv.amount || 0);
-    }
-
-    // Group invoices by budget category
     const groups = {};
-    const uncategorized = { name: "Uncategorized", sortOrder: 9999, invoices: [] };
-    for (const inv of invoices) {
-      const dv = dvById.get(inv.draw_vendor_id);
-      const catId = dv?.budget_category_id;
-      const vendor = vendorMap.get(dv?.vendor_id);
-      const cvId = cvByVendor.get(dv?.vendor_id);
-      const row = {
-        ...inv,
-        vendorName: vendor?.name || "Unknown",
-        clientVendorId: cvId,
-        vendorTotal: vendorTotals[vendor?.id] || 0,
-        cond: condByInvoice[inv.id] || condByDV[inv.draw_vendor_id],
-        uncond: cvId ? uncondByCV[cvId] : undefined,
-      };
+    const uncategorized = { name: "Uncategorized", sortOrder: 9999, lines: [] };
+    const recipientTotals = { vendor: 0, jlm: 0, mike: 0, jose: 0 };
+    let grandTotal = 0;
+
+    const addLine = (catId, line) => {
+      const amt = typeof line.amount === "number" && isFinite(line.amount) ? line.amount : null;
+      line.validAmount = amt;
+      if (amt != null) {
+        grandTotal += amt;
+        const r = line.recipient || "vendor";
+        recipientTotals[r] = (recipientTotals[r] || 0) + amt;
+      }
       if (catId && catMap.has(catId)) {
         if (!groups[catId]) {
           const c = catMap.get(catId);
-          groups[catId] = { name: c.name, sortOrder: c.sort_order || 0, invoices: [] };
+          groups[catId] = { name: c.name, sortOrder: c.sort_order || 0, lines: [] };
         }
-        groups[catId].invoices.push(row);
+        groups[catId].lines.push(line);
       } else {
-        uncategorized.invoices.push(row);
+        uncategorized.lines.push(line);
       }
-    }
+    };
+
+    drawVendors.forEach((dv) => {
+      const vendor = vendorMap.get(dv.vendor_id);
+      const recipient = dv.payment_recipient || "vendor";
+      const cvId = cvByVendor.get(dv.vendor_id);
+      const invoices = (invoicesByDV[dv.id] || [])
+        .slice()
+        .sort((a, b) => (a.invoice_date || "").localeCompare(b.invoice_date || ""));
+      const vendorTotal = invoices.reduce((s, inv) => s + (inv.amount || 0), 0);
+      const base = {
+        drawVendorId: dv.id,
+        vendorName: vendor?.name || "Unknown",
+        recipient,
+        clientVendorId: cvId,
+        vendorTotal,
+      };
+      if (invoices.length > 0) {
+        invoices.forEach((inv, i) => {
+          addLine(dv.budget_category_id, {
+            ...base,
+            id: inv.id,
+            hasInvoice: true,
+            invoice: inv,
+            invoiceNumber: inv.invoice_number || "",
+            invoiceDate: inv.invoice_date || "",
+            amount: inv.amount,
+            cond: condByInvoice[inv.id] || condByDV[dv.id],
+            uncond: cvId ? uncondByCV[cvId] : undefined,
+            docKind: inv.document_type === "receipt" ? "Receipt" : "Invoice",
+            index: i,
+          });
+        });
+      } else {
+        addLine(dv.budget_category_id, {
+          ...base,
+          id: `noinv-${dv.id}`,
+          hasInvoice: false,
+          invoice: null,
+          invoiceNumber: "",
+          invoiceDate: "",
+          amount: dv.amount,
+          cond: null,
+          uncond: cvId ? uncondByCV[cvId] : undefined,
+        });
+      }
+    });
+
     const groupList = Object.values(groups).sort((a, b) => a.sortOrder - b.sortOrder);
-    if (uncategorized.invoices.length > 0) groupList.push(uncategorized);
+    if (uncategorized.lines.length > 0) groupList.push(uncategorized);
 
-    const grandTotal = invoices.reduce((s, inv) => s + (inv.amount || 0), 0);
-    const approvedTotal = invoices
-      .filter((i) => i.review_status === "approved")
-      .reduce((s, inv) => s + (inv.amount || 0), 0);
-    const enteredCount = invoices.filter((i) => i.qbo_status === "entered").length;
-
-    return { groupList, grandTotal, approvedTotal, hasUncategorized: uncategorized.invoices.length > 0, invoiceCount: invoices.length, enteredCount };
+    return { groupList, grandTotal, recipientTotals };
   }, [drawVendors, vendors, allDocs, budgetCategories, clientVendors]);
 
-  const { groupList, grandTotal, approvedTotal, hasUncategorized, invoiceCount, enteredCount } = derived;
+  const { groupList, grandTotal, recipientTotals } = derived;
 
-  const updateDoc = async (docId, patch) => {
-    await base44.entities.Document.update(docId, patch);
-    queryClient.invalidateQueries({ queryKey: ["documents"] });
+  const updateRecipient = async (dvId, recipient) => {
+    await base44.entities.DrawVendor.update(dvId, { payment_recipient: recipient });
+    queryClient.invalidateQueries({ queryKey: ["drawVendors", drawId] });
   };
 
-  const lienLabel = (doc) =>
-    doc ? (
-      <a
-        href={doc.file_url || "#"}
-        target={doc.file_url ? "_blank" : undefined}
-        rel="noopener noreferrer"
-        className="text-emerald-600 font-medium hover:underline"
-        title={doc.status?.replace(/_/g, " ")}
-      >
-        {doc.status === "complete" ? "✓ Signed" : doc.status?.replace(/_/g, " ").slice(0, 12) || "✓"}
-      </a>
-    ) : (
-      <span className="text-slate-300">—</span>
-    );
+  const updateDVAmount = async (dvId, amount) => {
+    await base44.entities.DrawVendor.update(dvId, { amount });
+    queryClient.invalidateQueries({ queryKey: ["drawVendors", drawId] });
+  };
+
+  const openAddInvoice = (dvId) => {
+    setAddInvoiceDVId(dvId);
+    setAddInvoiceOpen(true);
+  };
+
+  const lineCount = groupList.reduce((s, g) => s + g.lines.length, 0);
 
   return (
     <div>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
         <div>
-          <h2 className="text-lg font-semibold text-slate-900">Invoice Ledger</h2>
-          <p className="text-sm text-slate-500">Every invoice/receipt for this draw, grouped by budget category</p>
+          <h2 className="text-lg font-semibold text-slate-900">Draw Ledger</h2>
+          <p className="text-sm text-slate-500">Invoices and amounts grouped by budget category</p>
         </div>
-        <div className="text-sm text-slate-600">
-          <span className="font-semibold text-slate-900">{formatCurrency(grandTotal)}</span> total
-          {" · "}
-          <span className="text-emerald-600">{formatCurrency(approvedTotal)} approved</span>
-          {" · "}
-          <span className="text-slate-500">QBO {enteredCount}/{invoiceCount} entered</span>
-        </div>
+        <Button size="sm" onClick={() => setAddVendorOpen(true)} className="shrink-0">
+          <Plus className="w-4 h-4 mr-1" />Add Vendor
+        </Button>
       </div>
 
-      {groupList.length === 0 ? (
+      {lineCount === 0 ? (
         <div className="text-center py-10 text-slate-400 border border-dashed rounded-lg">
           <FileText className="w-10 h-10 mx-auto mb-2 text-slate-300" />
-          No invoices uploaded for this draw yet.
+          No line items for this draw yet.
         </div>
       ) : (
-        <div className="overflow-x-auto border rounded-xl">
-          <table className="w-full text-sm min-w-[760px]">
-            <thead>
-              <tr className="border-b bg-slate-50 text-left text-xs text-slate-500 uppercase tracking-wide">
-                <th className="px-3 py-2.5 font-semibold">Vendor / Invoice</th>
-                <th className="px-3 py-2.5 font-semibold text-right">Amount</th>
-                <th className="px-3 py-2.5 font-semibold">Review</th>
-                <th className="px-3 py-2.5 font-semibold">QBO</th>
-                <th className="px-3 py-2.5 font-semibold">Lien Release</th>
-                <th className="px-3 py-2.5 font-semibold">Received</th>
-              </tr>
-            </thead>
-            <tbody>
-              {groupList.map((group) => {
-                const subtotal = group.invoices.reduce((s, inv) => s + (inv.amount || 0), 0);
-                return (
-                  <React.Fragment key={group.name}>
-                    <tr className="bg-slate-100/70 border-b">
-                      <td colSpan={6} className="px-3 py-1.5">
-                        <div className="flex items-center justify-between">
-                          <span className={`text-xs font-semibold uppercase tracking-wide ${hasUncategorized && group.name === "Uncategorized" ? "text-amber-700" : "text-slate-600"}`}>
-                            {group.name}
-                          </span>
-                          <span className="text-xs text-slate-500">Subtotal: <span className="font-semibold text-slate-800">{formatCurrency(subtotal)}</span></span>
-                        </div>
-                      </td>
-                    </tr>
-                    {group.invoices.map((inv) => (
-                      <tr key={inv.id} className="border-b last:border-0 hover:bg-slate-50">
-                        <td className="px-3 py-2.5">
-                          <div className="font-medium text-slate-900">{inv.vendorName}</div>
-                          <a
-                            href={inv.file_url || "#"}
-                            target={inv.file_url ? "_blank" : undefined}
-                            rel="noopener noreferrer"
-                            className={`inline-flex items-center gap-1 text-xs mt-0.5 ${inv.file_url ? "text-blue-600 hover:underline" : "text-slate-400"}`}
-                          >
-                            <ExternalLink className="w-3 h-3 shrink-0" />
-                            {inv.document_type === "receipt" ? "Receipt" : "Inv"}
-                            {inv.invoice_number ? ` ${inv.invoice_number}` : ""}
-                            {inv.invoice_date ? ` · ${formatDate(inv.invoice_date)}` : ""}
-                          </a>
-                        </td>
-                        <td className="px-3 py-2.5 text-right tabular-nums font-medium text-slate-900">
-                          {formatCurrency(inv.amount || 0)}
-                        </td>
-                        <td className="px-3 py-2.5">
-                          <Select value={inv.review_status || "approved"} onValueChange={(v) => updateDoc(inv.id, { review_status: v })}>
-                            <SelectTrigger className={`h-7 text-xs w-32 border-0 shadow-none focus:ring-1 font-medium ${reviewBadge[inv.review_status] || reviewBadge.approved}`}>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {REVIEW_OPTIONS.map((s) => (
-                                <SelectItem key={s} value={s}>{s.replace(/_/g, " ")}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </td>
-                        <td className="px-3 py-2.5">
-                          <QboTrackingCell doc={inv} onUpdate={updateDoc} />
-                        </td>
-                        <td className="px-3 py-2.5 text-xs">
-                          <div className="flex flex-col gap-0.5">
-                            <span className="flex items-center gap-1">
-                              <span className="text-slate-400 w-10">Cond</span>
-                              {inv.cond?.file_url
-                                ? lienLabel(inv.cond)
-                                : <button onClick={() => setCondTarget(inv)} className="text-blue-600 hover:underline">Add</button>}
+        <>
+          <div className="overflow-x-auto border rounded-xl">
+            <table className="w-full text-sm min-w-[820px]">
+              <thead>
+                <tr className="border-b bg-slate-50 text-left text-xs text-slate-500 uppercase tracking-wide">
+                  <th className="px-3 py-2.5 font-semibold">Vendor</th>
+                  <th className="px-3 py-2.5 font-semibold">Invoice #</th>
+                  <th className="px-3 py-2.5 font-semibold">Date</th>
+                  <th className="px-3 py-2.5 font-semibold text-right">Amount</th>
+                  <th className="px-3 py-2.5 font-semibold">Payment To</th>
+                  <th className="px-3 py-2.5 font-semibold">Documents / Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {groupList.map((group) => {
+                  const subtotal = group.lines.reduce((s, l) => s + (l.validAmount || 0), 0);
+                  const needsReview = group.lines.some((l) => l.validAmount == null);
+                  return (
+                    <React.Fragment key={group.name}>
+                      <tr className="bg-slate-100/70 border-b">
+                        <td colSpan={6} className="px-3 py-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-semibold text-slate-800">
+                              {group.name}
+                              {needsReview && <span className="ml-2 text-xs text-amber-600 font-medium">Amount needs review</span>}
                             </span>
-                            <span className="flex items-center gap-1">
-                              <span className="text-slate-400 w-10">Uncond</span>
-                              {inv.uncond
-                                ? lienLabel(inv.uncond)
-                                : inv.clientVendorId
-                                  ? <button onClick={() => setUncondTarget(inv)} className="text-blue-600 hover:underline">Add</button>
-                                  : <span className="text-slate-300" title="No client-vendor link">—</span>}
+                            <span className="text-xs text-slate-500">
+                              Category Total: <span className="font-semibold text-slate-800">{formatCurrency(subtotal)}</span>
                             </span>
                           </div>
                         </td>
-                        <td className="px-3 py-2.5 text-xs text-slate-500">
-                          {inv.received_date ? formatDate(inv.received_date) : "—"}
-                        </td>
                       </tr>
-                    ))}
-                  </React.Fragment>
-                );
-              })}
-            </tbody>
-            <tfoot>
-              <tr className="border-t-2 bg-slate-100 font-semibold">
-                <td className="px-3 py-3 text-slate-900">Grand Total</td>
-                <td className="px-3 py-3 text-right tabular-nums text-slate-900">{formatCurrency(grandTotal)}</td>
-                <td colSpan={4} className="px-3 py-3 text-xs font-normal text-slate-500">
-                  {formatCurrency(approvedTotal)} approved · {formatCurrency(grandTotal - approvedTotal)} pending review
-                </td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
+                      {group.lines.map((line) => (
+                        <tr key={line.id} className="border-b last:border-0 hover:bg-slate-50">
+                          <td className="px-3 py-2.5 font-medium text-slate-900 align-top">{line.vendorName}</td>
+                          <td className="px-3 py-2.5 align-top">
+                            {line.hasInvoice ? (
+                              <a
+                                href={line.invoice.file_url || "#"}
+                                target={line.invoice.file_url ? "_blank" : undefined}
+                                rel="noopener noreferrer"
+                                className={`inline-flex items-center gap-1 ${line.invoice.file_url ? "text-blue-600 hover:underline" : "text-slate-400"}`}
+                              >
+                                <ExternalLink className="w-3 h-3 shrink-0" />
+                                {line.invoiceNumber ? `${line.docKind} ${line.invoiceNumber}` : `${line.docKind} ${line.index + 1}`}
+                              </a>
+                            ) : (
+                              <span className="text-slate-400">No Invoice</span>
+                            )}
+                          </td>
+                          <td className="px-3 py-2.5 text-slate-600 align-top">{line.invoiceDate ? formatDate(line.invoiceDate) : "—"}</td>
+                          <td className="px-3 py-2.5 text-right tabular-nums font-medium text-slate-900 align-top">
+                            {line.validAmount == null ? (
+                              <span className="text-amber-600 text-xs font-medium">Amount Needs Review</span>
+                            ) : line.hasInvoice ? (
+                              formatCurrency(line.validAmount)
+                            ) : (
+                              <EditableAmount
+                                amount={line.validAmount || 0}
+                                onSave={(v) => updateDVAmount(line.drawVendorId, v)}
+                                className="justify-end"
+                              />
+                            )}
+                          </td>
+                          <td className="px-3 py-2.5 align-top">
+                            <Select value={line.recipient} onValueChange={(v) => updateRecipient(line.drawVendorId, v)}>
+                              <SelectTrigger className="h-7 text-xs w-24"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                {RECIPIENTS.map((r) => (
+                                  <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </td>
+                          <td className="px-3 py-2.5 align-top">
+                            <DocStatusButton line={line} projectName={drawCycle?.project_name} onAddInvoice={openAddInvoice} />
+                          </td>
+                        </tr>
+                      ))}
+                    </React.Fragment>
+                  );
+                })}
+              </tbody>
+              <tfoot>
+                <tr className="border-t-2 bg-slate-100 font-semibold">
+                  <td className="px-3 py-3 text-slate-900" colSpan={3}>Grand Total</td>
+                  <td className="px-3 py-3 text-right tabular-nums text-slate-900">{formatCurrency(grandTotal)}</td>
+                  <td colSpan={2}></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+
+          <div className="mt-4 grid grid-cols-2 sm:grid-cols-5 gap-3">
+            <SummaryCard label="Vendor Payments" value={recipientTotals.vendor} />
+            <SummaryCard label="Mike Reimbursements" value={recipientTotals.mike} />
+            <SummaryCard label="Jose Reimbursements" value={recipientTotals.jose} />
+            <SummaryCard label="JLM" value={recipientTotals.jlm} />
+            <SummaryCard label="Grand Total" value={grandTotal} strong />
+          </div>
+        </>
       )}
 
-      {uncondTarget && (
-        <UnconditionalLienDialog
-          open
-          onOpenChange={(o) => !o && setUncondTarget(null)}
-          clientVendorId={uncondTarget.clientVendorId}
-          vendorName={uncondTarget.vendorName}
-          projectName={drawCycle?.project_name}
-          drawAmount={uncondTarget.vendorTotal}
-        />
-      )}
-      {condTarget && (
-        <ConditionalLienDialog
-          open
-          onOpenChange={(o) => !o && setCondTarget(null)}
-          drawVendorId={condTarget.draw_vendor_id}
-          invoiceId={condTarget.id}
-          existingDocId={condTarget.cond?.id}
-          vendorName={condTarget.vendorName}
-          projectName={drawCycle?.project_name}
-          drawAmount={condTarget.vendorTotal}
-        />
-      )}
+      <AddVendorDialog open={addVendorOpen} onOpenChange={setAddVendorOpen} drawId={drawId} clientId={drawCycle?.client_id} />
+      <AddInvoiceDialog open={addInvoiceOpen} onOpenChange={setAddInvoiceOpen} drawVendorId={addInvoiceDVId} drawId={drawId} />
+    </div>
+  );
+}
+
+function SummaryCard({ label, value, strong }) {
+  return (
+    <div className={`border rounded-lg p-3 ${strong ? "bg-slate-900 border-slate-900" : "bg-white"}`}>
+      <div className={`text-xs ${strong ? "text-slate-300" : "text-slate-500"}`}>{label}</div>
+      <div className={`text-lg font-semibold tabular-nums ${strong ? "text-white" : "text-slate-900"}`}>
+        {formatCurrency(value || 0)}
+      </div>
     </div>
   );
 }

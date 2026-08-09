@@ -17,6 +17,16 @@
     "amount": {
       "type": "number"
     },
+    "payment_recipient": {
+      "type": "string",
+      "enum": [
+        "vendor",
+        "jlm",
+        "mike",
+        "jose"
+      ],
+      "default": "vendor"
+    },
     "status": {
       "type": "string",
       "enum": [
