@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import AddVendorDialog from "./AddVendorDialog";
 import AddInvoiceDialog from "./AddInvoiceDialog";
 import EditableAmount from "./EditableAmount";
 import { formatCurrency, formatDate } from "@/lib/format";
+import { useToast } from "@/components/ui/use-toast";
 
 const RECIPIENTS = [
   { value: "vendor", label: "Vendor" },
@@ -19,6 +20,7 @@ const RECIPIENTS = [
 
 export default function InvoiceLedger({ drawId }) {
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const [addVendorOpen, setAddVendorOpen] = useState(false);
   const [addInvoiceOpen, setAddInvoiceOpen] = useState(false);
   const [addInvoiceDVId, setAddInvoiceDVId] = useState(null);
@@ -163,45 +165,96 @@ export default function InvoiceLedger({ drawId }) {
     queryClient.invalidateQueries({ queryKey: ["drawVendors", drawId] });
   };
 
-  const categorizeInvoice = async (inv) => {
-    const cats = budgetCategories.filter((c) => c.status !== "archived");
-    if (cats.length === 0 || !inv.file_url) return null;
-    const list = cats.map((c) => `${c.id}: ${c.name}`).join("\n");
-    const res = await base44.integrations.Core.InvokeLLM({
-      prompt: `You are categorizing a construction loan draw invoice into the best matching budget category.\n\nAvailable categories (id: name):\n${list}\n\nRead the attached invoice and return the single category id that best matches the work or items on the invoice. Return JSON with "category_id". If none match, set category_id to null.`,
-      file_urls: [inv.file_url],
-      response_json_schema: { type: "object", properties: { category_id: { type: ["string", "null"] } } },
+  const budgetRef = useRef(null);
+  const ensureBudget = async () => {
+    if (budgetRef.current) return budgetRef.current;
+    const budgets = await base44.entities.Budget.filter({ client_id: drawCycle.client_id });
+    if (budgets.length > 0) { budgetRef.current = budgets[0].id; return budgets[0].id; }
+    const b = await base44.entities.Budget.create({ client_id: drawCycle.client_id, name: "Draw Budget", budget_type: "internal", status: "active" });
+    budgetRef.current = b.id;
+    return b.id;
+  };
+
+  const resolveCategory = async (result, cache) => {
+    if (!result) return null;
+    if (result.id) return result.id;
+    if (!result.name) return null;
+    const key = result.name.toLowerCase();
+    if (cache.has(key)) return cache.get(key);
+    const existing = budgetCategories.find((c) => c.name && c.name.toLowerCase() === key);
+    if (existing) { cache.set(key, existing.id); return existing.id; }
+    const budgetId = await ensureBudget();
+    const created = await base44.entities.BudgetCategory.create({
+      budget_id: budgetId,
+      client_id: drawCycle.client_id,
+      name: result.name,
+      sort_order: 0,
+      status: "active",
     });
-    return res?.category_id || null;
+    cache.set(key, created.id);
+    return created.id;
+  };
+
+  const categorizeInvoice = async (inv) => {
+    if (!inv.file_url) return null;
+    const cats = budgetCategories.filter((c) => c.status !== "archived");
+    const list = cats.map((c) => `${c.id}: ${c.name}`).join("\n") || "(none yet)";
+    const res = await base44.integrations.Core.InvokeLLM({
+      prompt: `You are categorizing a construction loan draw invoice into a budget category. Read the attached invoice and determine the single best category.\n\nExisting categories (id: name):\n${list}\n\nReturn JSON: "category_id" = the id of the best existing match (or null if none fit), and "category_name" = a short 1-3 word category label (e.g. "Waterproofing", "Electrical", "Plumbing"). If an existing category fits, prefer its id.`,
+      file_urls: [inv.file_url],
+      response_json_schema: { type: "object", properties: { category_id: { type: ["string", "null"] }, category_name: { type: ["string", "null"] } } },
+    });
+    return { id: res?.category_id || null, name: (res?.category_name || "").trim() || null };
   };
 
   const suggestCategory = async (line) => {
     if (!line.invoice?.file_url) return;
+    const cache = new Map();
     try {
-      const chosen = await categorizeInvoice(line.invoice);
-      if (chosen) {
-        await base44.entities.Document.update(line.invoice.id, { budget_category_id: chosen });
+      const result = await categorizeInvoice(line.invoice);
+      const catId = await resolveCategory(result, cache);
+      if (catId) {
+        await base44.entities.Document.update(line.invoice.id, { budget_category_id: catId });
         queryClient.invalidateQueries({ queryKey: ["documents"] });
+        queryClient.invalidateQueries({ queryKey: ["budgetCategories", drawCycle?.client_id] });
+        toast({ title: "Category assigned" });
+      } else {
+        toast({ variant: "destructive", title: "Could not determine category" });
       }
-    } catch (e) { /* ignore */ }
+    } catch (e) {
+      toast({ variant: "destructive", title: "Categorization failed", description: e.message });
+    }
   };
 
   const autoCategorizeAll = async () => {
+    const targets = [];
+    groupList.forEach((g) => g.lines.forEach((line) => {
+      if (line.hasInvoice && line.invoice.file_url && !line.invoice.budget_category_id) targets.push(line);
+    }));
+    if (targets.length === 0) {
+      toast({ title: "Nothing to categorize", description: "All invoices already have a category." });
+      return;
+    }
     setCategorizing(true);
+    const cache = new Map();
+    let assigned = 0;
     try {
-      const targets = [];
-      groupList.forEach((g) => g.lines.forEach((line) => {
-        if (line.hasInvoice && line.invoice.file_url && !line.invoice.budget_category_id) targets.push(line);
-      }));
       for (let i = 0; i < targets.length; i++) {
         const line = targets[i];
         setCatProgress(`${i + 1}/${targets.length}: ${line.vendorName}`);
         try {
-          const chosen = await categorizeInvoice(line.invoice);
-          if (chosen) await base44.entities.Document.update(line.invoice.id, { budget_category_id: chosen });
+          const result = await categorizeInvoice(line.invoice);
+          const catId = await resolveCategory(result, cache);
+          if (catId) {
+            await base44.entities.Document.update(line.invoice.id, { budget_category_id: catId });
+            assigned++;
+          }
         } catch (e) { /* skip individual */ }
       }
       queryClient.invalidateQueries({ queryKey: ["documents"] });
+      queryClient.invalidateQueries({ queryKey: ["budgetCategories", drawCycle?.client_id] });
+      queryClient.invalidateQueries({ queryKey: ["budgets", drawCycle?.client_id] });
+      toast({ title: "Categorization complete", description: `${assigned} of ${targets.length} invoice(s) categorized.` });
     } finally {
       setCategorizing(false);
       setCatProgress("");
