@@ -80,6 +80,7 @@ export default function InvoiceLedger({ drawId }) {
     const addLine = (catId, line) => {
       const amt = typeof line.amount === "number" && isFinite(line.amount) ? line.amount : null;
       line.validAmount = amt;
+      line.categoryName = (catId && catMap.get(catId)?.name) || "Uncategorized";
       if (amt != null) {
         grandTotal += amt;
         const r = line.recipient || "vendor";
@@ -191,6 +192,7 @@ export default function InvoiceLedger({ drawId }) {
               <thead>
                 <tr className="border-b bg-slate-50 text-left text-xs text-slate-500 uppercase tracking-wide">
                   <th className="px-3 py-2.5 font-semibold">Vendor</th>
+                  <th className="px-3 py-2.5 font-semibold">Category</th>
                   <th className="px-3 py-2.5 font-semibold">Invoice #</th>
                   <th className="px-3 py-2.5 font-semibold">Date</th>
                   <th className="px-3 py-2.5 font-semibold text-right">Amount</th>
@@ -205,7 +207,7 @@ export default function InvoiceLedger({ drawId }) {
                   return (
                     <React.Fragment key={group.name}>
                       <tr className="bg-slate-100/70 border-b">
-                        <td colSpan={6} className="px-3 py-2">
+                        <td colSpan={7} className="px-3 py-2">
                           <div className="flex items-center justify-between">
                             <span className="text-sm font-semibold text-slate-800">
                               {group.name}
@@ -220,6 +222,7 @@ export default function InvoiceLedger({ drawId }) {
                       {group.lines.map((line) => (
                         <tr key={line.id} className="border-b last:border-0 hover:bg-slate-50">
                           <td className="px-3 py-2.5 font-medium text-slate-900 align-top">{line.vendorName}</td>
+                          <td className="px-3 py-2.5 text-slate-600 align-top">{line.categoryName}</td>
                           <td className="px-3 py-2.5 align-top">
                             {line.hasInvoice ? (
                               <a
@@ -270,7 +273,7 @@ export default function InvoiceLedger({ drawId }) {
               </tbody>
               <tfoot>
                 <tr className="border-t-2 bg-slate-100 font-semibold">
-                  <td className="px-3 py-3 text-slate-900" colSpan={3}>Grand Total</td>
+                  <td className="px-3 py-3 text-slate-900" colSpan={4}>Grand Total</td>
                   <td className="px-3 py-3 text-right tabular-nums text-slate-900">{formatCurrency(grandTotal)}</td>
                   <td colSpan={2}></td>
                 </tr>
