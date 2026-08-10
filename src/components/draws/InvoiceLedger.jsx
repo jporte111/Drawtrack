@@ -313,11 +313,8 @@ export default function InvoiceLedger({ drawId }) {
                     <React.Fragment key={group.name}>
                       <tr className="bg-slate-100/70 border-b">
                         <td colSpan={7} className="px-3 py-2">
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm font-semibold text-slate-800">
-                              {group.name}
-                              {needsReview && <span className="ml-2 text-xs text-amber-600 font-medium">Amount needs review</span>}
-                            </span>
+                          <div className="flex items-center justify-end">
+                            {needsReview && <span className="mr-3 text-xs text-amber-600 font-medium">Amount needs review</span>}
                             <span className="text-xs text-slate-500">
                               Category Total: <span className="font-semibold text-slate-800">{formatCurrency(subtotal)}</span>
                             </span>
