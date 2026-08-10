@@ -8,6 +8,9 @@
     "client_vendor_id": {
       "type": "string"
     },
+    "budget_category_id": {
+      "type": "string"
+    },
     "document_type": {
       "type": "string",
       "enum": [

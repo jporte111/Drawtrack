@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, FileText, ExternalLink } from "lucide-react";
+import { Plus, FileText, ExternalLink, Sparkles } from "lucide-react";
 import DocStatusButton from "./DocStatusButton";
 import AddVendorDialog from "./AddVendorDialog";
 import AddInvoiceDialog from "./AddInvoiceDialog";
@@ -22,6 +22,8 @@ export default function InvoiceLedger({ drawId }) {
   const [addVendorOpen, setAddVendorOpen] = useState(false);
   const [addInvoiceOpen, setAddInvoiceOpen] = useState(false);
   const [addInvoiceDVId, setAddInvoiceDVId] = useState(null);
+  const [categorizing, setCategorizing] = useState(false);
+  const [catProgress, setCatProgress] = useState("");
 
   const { data: drawCycle } = useQuery({
     queryKey: ["drawCycle", drawId],
@@ -114,7 +116,7 @@ export default function InvoiceLedger({ drawId }) {
       };
       if (invoices.length > 0) {
         invoices.forEach((inv, i) => {
-          addLine(dv.budget_category_id, {
+          addLine(inv.budget_category_id || dv.budget_category_id, {
             ...base,
             id: inv.id,
             hasInvoice: true,
@@ -161,6 +163,51 @@ export default function InvoiceLedger({ drawId }) {
     queryClient.invalidateQueries({ queryKey: ["drawVendors", drawId] });
   };
 
+  const categorizeInvoice = async (inv) => {
+    const cats = budgetCategories.filter((c) => c.status !== "archived");
+    if (cats.length === 0 || !inv.file_url) return null;
+    const list = cats.map((c) => `${c.id}: ${c.name}`).join("\n");
+    const res = await base44.integrations.Core.InvokeLLM({
+      prompt: `You are categorizing a construction loan draw invoice into the best matching budget category.\n\nAvailable categories (id: name):\n${list}\n\nRead the attached invoice and return the single category id that best matches the work or items on the invoice. Return JSON with "category_id". If none match, set category_id to null.`,
+      file_urls: [inv.file_url],
+      response_json_schema: { type: "object", properties: { category_id: { type: ["string", "null"] } } },
+    });
+    return res?.category_id || null;
+  };
+
+  const suggestCategory = async (line) => {
+    if (!line.invoice?.file_url) return;
+    try {
+      const chosen = await categorizeInvoice(line.invoice);
+      if (chosen) {
+        await base44.entities.Document.update(line.invoice.id, { budget_category_id: chosen });
+        queryClient.invalidateQueries({ queryKey: ["documents"] });
+      }
+    } catch (e) { /* ignore */ }
+  };
+
+  const autoCategorizeAll = async () => {
+    setCategorizing(true);
+    try {
+      const targets = [];
+      groupList.forEach((g) => g.lines.forEach((line) => {
+        if (line.hasInvoice && line.invoice.file_url && !line.invoice.budget_category_id) targets.push(line);
+      }));
+      for (let i = 0; i < targets.length; i++) {
+        const line = targets[i];
+        setCatProgress(`${i + 1}/${targets.length}: ${line.vendorName}`);
+        try {
+          const chosen = await categorizeInvoice(line.invoice);
+          if (chosen) await base44.entities.Document.update(line.invoice.id, { budget_category_id: chosen });
+        } catch (e) { /* skip individual */ }
+      }
+      queryClient.invalidateQueries({ queryKey: ["documents"] });
+    } finally {
+      setCategorizing(false);
+      setCatProgress("");
+    }
+  };
+
   const openAddInvoice = (dvId) => {
     setAddInvoiceDVId(dvId);
     setAddInvoiceOpen(true);
@@ -175,9 +222,14 @@ export default function InvoiceLedger({ drawId }) {
           <h2 className="text-lg font-semibold text-slate-900">Draw Ledger</h2>
           <p className="text-sm text-slate-500">Invoices and amounts grouped by budget category</p>
         </div>
-        <Button size="sm" onClick={() => setAddVendorOpen(true)} className="shrink-0">
-          <Plus className="w-4 h-4 mr-1" />Add Vendor
-        </Button>
+        <div className="flex items-center gap-2 shrink-0">
+          <Button size="sm" variant="outline" onClick={autoCategorizeAll} disabled={categorizing}>
+            <Sparkles className="w-4 h-4 mr-1" />{categorizing ? (catProgress || "Categorizing...") : "Auto-Categorize"}
+          </Button>
+          <Button size="sm" onClick={() => setAddVendorOpen(true)}>
+            <Plus className="w-4 h-4 mr-1" />Add Vendor
+          </Button>
+        </div>
       </div>
 
       {lineCount === 0 ? (
@@ -263,7 +315,7 @@ export default function InvoiceLedger({ drawId }) {
                             </Select>
                           </td>
                           <td className="px-3 py-2.5 align-top">
-                            <DocStatusButton line={line} projectName={drawCycle?.project_name} onAddInvoice={openAddInvoice} />
+                            <DocStatusButton line={line} projectName={drawCycle?.project_name} onAddInvoice={openAddInvoice} onSuggestCategory={suggestCategory} />
                           </td>
                         </tr>
                       ))}

@@ -4,7 +4,7 @@ import { base44 } from "@/api/base44Client";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { ExternalLink, Plus } from "lucide-react";
+import { ExternalLink, Plus, Sparkles } from "lucide-react";
 import ConditionalLienDialog from "./ConditionalLienDialog";
 import UnconditionalLienDialog from "./UnconditionalLienDialog";
 import QboTrackingCell from "./QboTrackingCell";
@@ -42,17 +42,29 @@ function computeStatus(line) {
   return { label: "Complete", tone: "green" };
 }
 
-export default function DocStatusButton({ line, projectName, onAddInvoice }) {
+export default function DocStatusButton({ line, projectName, onAddInvoice, onSuggestCategory }) {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [condOpen, setCondOpen] = useState(false);
   const [uncondOpen, setUncondOpen] = useState(false);
+  const [suggesting, setSuggesting] = useState(false);
   const status = computeStatus(line);
   const interactive = line.hasInvoice || line.recipient === "vendor";
 
   const updateDoc = async (docId, patch) => {
     await base44.entities.Document.update(docId, patch);
     queryClient.invalidateQueries({ queryKey: ["documents"] });
+  };
+
+  const handleSuggest = async () => {
+    if (!onSuggestCategory) return;
+    setSuggesting(true);
+    setOpen(false);
+    try {
+      await onSuggestCategory(line);
+    } finally {
+      setSuggesting(false);
+    }
   };
 
   if (!interactive) {
@@ -139,6 +151,13 @@ export default function DocStatusButton({ line, projectName, onAddInvoice }) {
               <div className="pt-1 border-t">
                 <Button size="sm" variant="ghost" className="h-7 text-xs w-full justify-start" onClick={() => { setOpen(false); onAddInvoice(line.drawVendorId); }}>
                   <Plus className="w-3 h-3 mr-1" /> Add another invoice to {line.vendorName}
+                </Button>
+              </div>
+            )}
+            {line.hasInvoice && line.invoice?.file_url && (
+              <div className="pt-1 border-t">
+                <Button size="sm" variant="ghost" className="h-7 text-xs w-full justify-start" onClick={handleSuggest} disabled={suggesting}>
+                  <Sparkles className="w-3 h-3 mr-1" /> {suggesting ? "Suggesting..." : "Suggest category from invoice"}
                 </Button>
               </div>
             )}
