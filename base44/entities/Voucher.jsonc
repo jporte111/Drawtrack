@@ -36,6 +36,9 @@
       "type": "string",
       "format": "date"
     },
+    "file_url": {
+      "type": "string"
+    },
     "notes": {
       "type": "string"
     }
