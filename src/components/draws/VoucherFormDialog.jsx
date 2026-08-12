@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-const VOUCHER_STATUSES = ["draft", "pending", "approved", "paid", "void"];
+const VOUCHER_STATUSES = ["draft", "pending", "signed", "paid", "void"];
 
 export default function VoucherFormDialog({ open, onOpenChange, drawId, voucher }) {
   const queryClient = useQueryClient();

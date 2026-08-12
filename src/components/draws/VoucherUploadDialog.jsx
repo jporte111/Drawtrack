@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Upload, Loader2 } from "lucide-react";
 
-const VOUCHER_STATUSES = ["draft", "pending", "approved", "paid", "void"];
+const VOUCHER_STATUSES = ["draft", "pending", "signed", "paid", "void"];
 
 export default function VoucherUploadDialog({ open, onOpenChange, drawId }) {
   const queryClient = useQueryClient();

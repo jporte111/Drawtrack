@@ -25,7 +25,7 @@ export const statusConfig = {
   open: { label: "Open", className: "bg-red-100 text-red-700" },
   resolved: { label: "Resolved", className: "bg-emerald-100 text-emerald-700" },
   // Voucher
-  approved_voucher: { label: "Approved", className: "bg-indigo-100 text-indigo-700" },
+  signed: { label: "Signed", className: "bg-indigo-100 text-indigo-700" },
   paid: { label: "Paid", className: "bg-emerald-100 text-emerald-700" },
   void: { label: "Void", className: "bg-slate-200 text-slate-500" },
 };
