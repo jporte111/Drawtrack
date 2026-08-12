@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { Plus, Upload, FileText } from "lucide-react";
+import { Plus, Upload, FileText, Pencil } from "lucide-react";
 import StatusBadge from "@/components/StatusBadge";
 import { formatCurrency, formatDate } from "@/lib/format";
 import VoucherFormDialog from "./VoucherFormDialog";
@@ -11,6 +11,7 @@ import VoucherUploadDialog from "./VoucherUploadDialog";
 export default function VoucherSection({ drawId }) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(false);
+  const [editVoucher, setEditVoucher] = useState(null);
   const queryClient = useQueryClient();
 
   const { data: vouchers = [] } = useQuery({
@@ -53,6 +54,7 @@ export default function VoucherSection({ drawId }) {
                   <th className="px-3 py-2 font-semibold">Issued</th>
                   <th className="px-3 py-2 font-semibold">Paid</th>
                   <th className="px-3 py-2 font-semibold">Status</th>
+                  <th className="px-3 py-2"></th>
                 </tr>
               </thead>
               <tbody>
@@ -73,6 +75,11 @@ export default function VoucherSection({ drawId }) {
                       <td className="px-3 py-2 text-slate-600">{formatDate(v.issue_date)}</td>
                       <td className="px-3 py-2 text-slate-600">{formatDate(v.payment_date)}</td>
                       <td className="px-3 py-2"><StatusBadge status={v.status} /></td>
+                      <td className="px-3 py-2">
+                        <Button size="icon" variant="ghost" className="h-7 w-7 text-slate-400 hover:text-slate-700" onClick={() => setEditVoucher(v)}>
+                          <Pencil className="w-3.5 h-3.5" />
+                        </Button>
+                      </td>
                     </tr>
                   );
                 })}
@@ -98,7 +105,12 @@ export default function VoucherSection({ drawId }) {
                       </div>
                       <div className="text-sm text-slate-600">{vendor?.name || "—"}</div>
                     </div>
-                    <StatusBadge status={v.status} />
+                    <div className="flex items-center gap-1">
+                      <StatusBadge status={v.status} />
+                      <Button size="icon" variant="ghost" className="h-7 w-7 text-slate-400 hover:text-slate-700" onClick={() => setEditVoucher(v)}>
+                        <Pencil className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
                   </div>
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-slate-500">Issued: {formatDate(v.issue_date)}</span>
@@ -113,7 +125,7 @@ export default function VoucherSection({ drawId }) {
           </div>
         </>
       )}
-      <VoucherFormDialog open={dialogOpen} onOpenChange={setDialogOpen} drawId={drawId} />
+      <VoucherFormDialog open={dialogOpen || !!editVoucher} onOpenChange={(v) => { if (!v) { setDialogOpen(false); setEditVoucher(null); } }} drawId={drawId} voucher={editVoucher} />
       <VoucherUploadDialog open={uploadOpen} onOpenChange={setUploadOpen} drawId={drawId} />
     </div>
   );

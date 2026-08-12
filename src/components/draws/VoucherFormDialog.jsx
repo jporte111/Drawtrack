@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 const VOUCHER_STATUSES = ["draft", "pending", "approved", "paid", "void"];
 
-export default function VoucherFormDialog({ open, onOpenChange, drawId }) {
+export default function VoucherFormDialog({ open, onOpenChange, drawId, voucher }) {
   const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({ voucher_number: "", draw_vendor_id: "", amount: "", status: "draft", issue_date: "", payment_date: "", notes: "" });
@@ -27,17 +27,29 @@ export default function VoucherFormDialog({ open, onOpenChange, drawId }) {
   const vendorMap = new Map(vendors.map((v) => [v.id, v]));
 
   useEffect(() => {
-    if (open) setForm({ voucher_number: "", draw_vendor_id: "", amount: "", status: "draft", issue_date: "", payment_date: "", notes: "" });
-  }, [open]);
+    if (!open) return;
+    if (voucher) {
+      setForm({
+        voucher_number: voucher.voucher_number || "",
+        draw_vendor_id: voucher.draw_vendor_id || "",
+        amount: voucher.amount != null ? String(voucher.amount) : "",
+        status: voucher.status || "draft",
+        issue_date: voucher.issue_date || "",
+        payment_date: voucher.payment_date || "",
+        notes: voucher.notes || "",
+      });
+    } else {
+      setForm({ voucher_number: "", draw_vendor_id: "", amount: "", status: "draft", issue_date: "", payment_date: "", notes: "" });
+    }
+  }, [open, voucher]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
     const dv = drawVendors.find((d) => d.id === form.draw_vendor_id);
     try {
-      await base44.entities.Voucher.create({
+      const payload = {
         voucher_number: form.voucher_number,
-        draw_cycle_id: drawId,
         draw_vendor_id: form.draw_vendor_id || null,
         vendor_id: dv?.vendor_id || null,
         amount: form.amount ? Number(form.amount) : null,
@@ -45,7 +57,12 @@ export default function VoucherFormDialog({ open, onOpenChange, drawId }) {
         issue_date: form.issue_date || null,
         payment_date: form.payment_date || null,
         notes: form.notes,
-      });
+      };
+      if (voucher) {
+        await base44.entities.Voucher.update(voucher.id, payload);
+      } else {
+        await base44.entities.Voucher.create({ ...payload, draw_cycle_id: drawId });
+      }
       queryClient.invalidateQueries({ queryKey: ["vouchers", drawId] });
       onOpenChange(false);
     } finally {
@@ -56,7 +73,7 @@ export default function VoucherFormDialog({ open, onOpenChange, drawId }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
-        <DialogHeader><DialogTitle>New Voucher</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle>{voucher ? "Edit Voucher" : "New Voucher"}</DialogTitle></DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
@@ -106,7 +123,7 @@ export default function VoucherFormDialog({ open, onOpenChange, drawId }) {
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-            <Button type="submit" disabled={saving}>{saving ? "Saving..." : "Save"}</Button>
+            <Button type="submit" disabled={saving}>{saving ? "Saving..." : voucher ? "Update" : "Save"}</Button>
           </DialogFooter>
         </form>
       </DialogContent>
