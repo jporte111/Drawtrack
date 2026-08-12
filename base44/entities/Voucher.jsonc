@@ -28,6 +28,14 @@
       ],
       "default": "draft"
     },
+    "sent_to_client": {
+      "type": "boolean",
+      "default": false
+    },
+    "sent_date": {
+      "type": "string",
+      "format": "date"
+    },
     "issue_date": {
       "type": "string",
       "format": "date"

@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { Plus, Upload, FileText, Pencil, Trash2 } from "lucide-react";
+import { Plus, Upload, FileText, Pencil, Trash2, Send, CheckCircle2, Undo2 } from "lucide-react";
 import StatusBadge from "@/components/StatusBadge";
 import { formatCurrency, formatDate } from "@/lib/format";
 import VoucherFormDialog from "./VoucherFormDialog";
@@ -29,6 +29,15 @@ export default function VoucherSection({ drawId }) {
 
   const vendorMap = new Map(vendors.map((v) => [v.id, v]));
   const dvMap = new Map(drawVendors.map((dv) => [dv.id, dv]));
+
+  const toggleSent = async (voucher) => {
+    if (voucher.sent_to_client) {
+      await base44.entities.Voucher.update(voucher.id, { sent_to_client: false, sent_date: null });
+    } else {
+      await base44.entities.Voucher.update(voucher.id, { sent_to_client: true, sent_date: new Date().toISOString().slice(0, 10) });
+    }
+    queryClient.invalidateQueries({ queryKey: ["vouchers", drawId] });
+  };
 
   const handleDelete = async (voucher) => {
     if (!window.confirm(`Delete voucher ${voucher.voucher_number || ""}? This cannot be undone.`)) return;
@@ -60,6 +69,7 @@ export default function VoucherSection({ drawId }) {
                   <th className="px-3 py-2 font-semibold">Issued</th>
                   <th className="px-3 py-2 font-semibold">Paid</th>
                   <th className="px-3 py-2 font-semibold">Status</th>
+                  <th className="px-3 py-2 font-semibold">Sent</th>
                   <th className="px-3 py-2"></th>
                 </tr>
               </thead>
@@ -67,6 +77,7 @@ export default function VoucherSection({ drawId }) {
                 {vouchers.map((v) => {
                   const dv = dvMap.get(v.draw_vendor_id);
                   const vendor = vendorMap.get(v.vendor_id || dv?.vendor_id);
+                  const done = v.status === "signed" && v.sent_to_client;
                   return (
                     <tr key={v.id} className="border-b last:border-0 hover:bg-slate-50">
                       <td className="px-3 py-2 font-medium">
@@ -80,9 +91,25 @@ export default function VoucherSection({ drawId }) {
                       <td className="px-3 py-2 text-right font-medium">{formatCurrency(v.amount)}</td>
                       <td className="px-3 py-2 text-slate-600">{formatDate(v.issue_date)}</td>
                       <td className="px-3 py-2 text-slate-600">{formatDate(v.payment_date)}</td>
-                      <td className="px-3 py-2"><StatusBadge status={v.status} /></td>
+                      <td className="px-3 py-2">
+                        {done ? (
+                          <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700"><CheckCircle2 className="w-3.5 h-3.5" />Done</span>
+                        ) : (
+                          <StatusBadge status={v.status} />
+                        )}
+                      </td>
+                      <td className="px-3 py-2 text-slate-600">
+                        {v.sent_to_client ? (
+                          <span className="inline-flex items-center gap-1 text-xs text-emerald-700"><Send className="w-3 h-3" />{formatDate(v.sent_date)}</span>
+                        ) : (
+                          <span className="text-slate-400">—</span>
+                        )}
+                      </td>
                       <td className="px-3 py-2">
                         <div className="flex items-center gap-1">
+                          <Button size="icon" variant="ghost" className={`h-7 w-7 ${v.sent_to_client ? "text-emerald-600 hover:text-emerald-700" : "text-slate-400 hover:text-emerald-600"}`} onClick={() => toggleSent(v)} title={v.sent_to_client ? "Mark as not sent" : "Mark sent to client"}>
+                            {v.sent_to_client ? <Undo2 className="w-3.5 h-3.5" /> : <Send className="w-3.5 h-3.5" />}
+                          </Button>
                           <Button size="icon" variant="ghost" className="h-7 w-7 text-slate-400 hover:text-slate-700" onClick={() => setEditVoucher(v)}>
                             <Pencil className="w-3.5 h-3.5" />
                           </Button>
@@ -103,6 +130,7 @@ export default function VoucherSection({ drawId }) {
             {vouchers.map((v) => {
               const dv = dvMap.get(v.draw_vendor_id);
               const vendor = vendorMap.get(v.vendor_id || dv?.vendor_id);
+              const done = v.status === "signed" && v.sent_to_client;
               return (
                 <div key={v.id} className="border rounded-lg p-3 space-y-1.5">
                   <div className="flex items-start justify-between gap-2">
@@ -117,7 +145,14 @@ export default function VoucherSection({ drawId }) {
                       <div className="text-sm text-slate-600">{vendor?.name || "—"}</div>
                     </div>
                     <div className="flex items-center gap-1">
-                      <StatusBadge status={v.status} />
+                      {done ? (
+                        <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700"><CheckCircle2 className="w-3.5 h-3.5" />Done</span>
+                      ) : (
+                        <StatusBadge status={v.status} />
+                      )}
+                      <Button size="icon" variant="ghost" className={`h-7 w-7 ${v.sent_to_client ? "text-emerald-600 hover:text-emerald-700" : "text-slate-400 hover:text-emerald-600"}`} onClick={() => toggleSent(v)} title={v.sent_to_client ? "Mark as not sent" : "Mark sent to client"}>
+                        {v.sent_to_client ? <Undo2 className="w-3.5 h-3.5" /> : <Send className="w-3.5 h-3.5" />}
+                      </Button>
                       <Button size="icon" variant="ghost" className="h-7 w-7 text-slate-400 hover:text-slate-700" onClick={() => setEditVoucher(v)}>
                         <Pencil className="w-3.5 h-3.5" />
                       </Button>
@@ -130,6 +165,9 @@ export default function VoucherSection({ drawId }) {
                     <span className="text-slate-500">Issued: {formatDate(v.issue_date)}</span>
                     <span className="font-medium text-slate-900">{formatCurrency(v.amount)}</span>
                   </div>
+                  {v.sent_to_client && (
+                    <div className="text-sm text-emerald-700">Sent to client: {formatDate(v.sent_date)}</div>
+                  )}
                   {v.payment_date && (
                     <div className="text-sm text-slate-500">Paid: {formatDate(v.payment_date)}</div>
                   )}
