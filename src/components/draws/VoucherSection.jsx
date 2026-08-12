@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { Plus, Upload, FileText, Pencil } from "lucide-react";
+import { Plus, Upload, FileText, Pencil, Trash2 } from "lucide-react";
 import StatusBadge from "@/components/StatusBadge";
 import { formatCurrency, formatDate } from "@/lib/format";
 import VoucherFormDialog from "./VoucherFormDialog";
@@ -29,6 +29,12 @@ export default function VoucherSection({ drawId }) {
 
   const vendorMap = new Map(vendors.map((v) => [v.id, v]));
   const dvMap = new Map(drawVendors.map((dv) => [dv.id, dv]));
+
+  const handleDelete = async (voucher) => {
+    if (!window.confirm(`Delete voucher ${voucher.voucher_number || ""}? This cannot be undone.`)) return;
+    await base44.entities.Voucher.delete(voucher.id);
+    queryClient.invalidateQueries({ queryKey: ["vouchers", drawId] });
+  };
 
   return (
     <div>
@@ -76,9 +82,14 @@ export default function VoucherSection({ drawId }) {
                       <td className="px-3 py-2 text-slate-600">{formatDate(v.payment_date)}</td>
                       <td className="px-3 py-2"><StatusBadge status={v.status} /></td>
                       <td className="px-3 py-2">
-                        <Button size="icon" variant="ghost" className="h-7 w-7 text-slate-400 hover:text-slate-700" onClick={() => setEditVoucher(v)}>
-                          <Pencil className="w-3.5 h-3.5" />
-                        </Button>
+                        <div className="flex items-center gap-1">
+                          <Button size="icon" variant="ghost" className="h-7 w-7 text-slate-400 hover:text-slate-700" onClick={() => setEditVoucher(v)}>
+                            <Pencil className="w-3.5 h-3.5" />
+                          </Button>
+                          <Button size="icon" variant="ghost" className="h-7 w-7 text-slate-400 hover:text-red-600" onClick={() => handleDelete(v)}>
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -109,6 +120,9 @@ export default function VoucherSection({ drawId }) {
                       <StatusBadge status={v.status} />
                       <Button size="icon" variant="ghost" className="h-7 w-7 text-slate-400 hover:text-slate-700" onClick={() => setEditVoucher(v)}>
                         <Pencil className="w-3.5 h-3.5" />
+                      </Button>
+                      <Button size="icon" variant="ghost" className="h-7 w-7 text-slate-400 hover:text-red-600" onClick={() => handleDelete(v)}>
+                        <Trash2 className="w-3.5 h-3.5" />
                       </Button>
                     </div>
                   </div>
