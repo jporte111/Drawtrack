@@ -22,7 +22,7 @@
       "enum": [
         "draft",
         "pending",
-        "approved",
+        "signed",
         "paid",
         "void"
       ],
