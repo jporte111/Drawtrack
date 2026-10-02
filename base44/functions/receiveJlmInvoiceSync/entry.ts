@@ -107,15 +107,19 @@ export default async function(req) {
 
     // 4. Duplicate check: same invoice_number (case-insensitive) for the same ClientVendor pair
     const invoiceNumber = body.invoice_number != null ? String(body.invoice_number).trim() : '';
+    const fileUrl = (body.file_url || '').trim();
     if (invoiceNumber) {
       const dupPage = await svc.entities.Document.filter(
         { client_vendor_id: clientVendor.id },
-        { limit: 500, fields: ['invoice_number', 'draw_vendor_id'] }
+        { limit: 500, fields: ['invoice_number', 'draw_vendor_id', 'file_url'] }
       );
       const dup = (dupPage.items || []).find((d) => norm(d.invoice_number) === norm(invoiceNumber));
       if (dup) {
-        if (!dup.draw_vendor_id && attachedDrawVendorId) {
-          await svc.entities.Document.update(dup.id, { draw_vendor_id: attachedDrawVendorId });
+        const dupUpdates = {};
+        if (!dup.draw_vendor_id && attachedDrawVendorId) dupUpdates.draw_vendor_id = attachedDrawVendorId;
+        if (!dup.file_url && fileUrl) dupUpdates.file_url = fileUrl;
+        if (Object.keys(dupUpdates).length > 0) {
+          await svc.entities.Document.update(dup.id, dupUpdates);
         }
         const dupResp = {
           ok: true,
@@ -147,6 +151,7 @@ export default async function(req) {
     if (body.invoice_date) docData.invoice_date = body.invoice_date;
     if (body.received_date) docData.received_date = body.received_date;
     if (body.notes) docData.notes = body.notes;
+    if (fileUrl) docData.file_url = fileUrl;
     if (attachedDrawVendorId) docData.draw_vendor_id = attachedDrawVendorId;
 
     const doc = await svc.entities.Document.create(docData);
