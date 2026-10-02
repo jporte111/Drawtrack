@@ -90,23 +90,44 @@ export default async function(req) {
       });
     }
 
+    // Draw-ledger attachment: find the client's in-progress DrawCycle (most recent), then a matching DrawVendor row
+    const cyclesPage = await svc.entities.DrawCycle.filter(
+      { client_id: client.id, status: 'in_progress' },
+      { sort: '-created_date', limit: 1 }
+    );
+    const cycle = (cyclesPage.items || [])[0];
+    let attachedDrawVendorId = null;
+    if (cycle) {
+      const dvPage = await svc.entities.DrawVendor.filter(
+        { draw_cycle_id: cycle.id, vendor_id: vendor.id },
+        { limit: 1 }
+      );
+      attachedDrawVendorId = ((dvPage.items || [])[0] || {}).id || null;
+    }
+
     // 4. Duplicate check: same invoice_number (case-insensitive) for the same ClientVendor pair
     const invoiceNumber = body.invoice_number != null ? String(body.invoice_number).trim() : '';
     if (invoiceNumber) {
       const dupPage = await svc.entities.Document.filter(
         { client_vendor_id: clientVendor.id },
-        { limit: 500, fields: ['invoice_number'] }
+        { limit: 500, fields: ['invoice_number', 'draw_vendor_id'] }
       );
       const dup = (dupPage.items || []).find((d) => norm(d.invoice_number) === norm(invoiceNumber));
       if (dup) {
-        return Response.json({
+        if (!dup.draw_vendor_id && attachedDrawVendorId) {
+          await svc.entities.Document.update(dup.id, { draw_vendor_id: attachedDrawVendorId });
+        }
+        const dupResp = {
           ok: true,
           result: 'duplicate',
           document_id: dup.id,
           vendor_id: vendor.id,
           client_id: client.id,
           client_vendor_id: clientVendor.id
-        });
+        };
+        if (attachedDrawVendorId) dupResp.attached_draw_vendor_id = attachedDrawVendorId;
+        else dupResp.draw_vendor_row_missing = true;
+        return Response.json(dupResp);
       }
     }
 
@@ -126,16 +147,20 @@ export default async function(req) {
     if (body.invoice_date) docData.invoice_date = body.invoice_date;
     if (body.received_date) docData.received_date = body.received_date;
     if (body.notes) docData.notes = body.notes;
+    if (attachedDrawVendorId) docData.draw_vendor_id = attachedDrawVendorId;
 
     const doc = await svc.entities.Document.create(docData);
-    return Response.json({
+    const resp = {
       ok: true,
       result: 'created',
       document_id: doc.id,
       vendor_id: vendor.id,
       client_id: client.id,
       client_vendor_id: clientVendor.id
-    });
+    };
+    if (attachedDrawVendorId) resp.attached_draw_vendor_id = attachedDrawVendorId;
+    else resp.draw_vendor_row_missing = true;
+    return Response.json(resp);
   } catch (error) {
     return Response.json({ ok: false, error: (error && error.message) || String(error) });
   }
