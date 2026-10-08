@@ -57,16 +57,13 @@ export default function DocStatusButton({ line, projectName, onAddInvoice, onSug
   };
 
   const handleDelete = async () => {
-    if (!window.confirm(`Delete this ${line.docKind || "invoice"}${line.invoiceNumber ? ` (${line.invoiceNumber})` : ""}? This cannot be undone.`)) return;
-    await base44.entities.Document.delete(line.invoice.id);
-    // If the vendor has no remaining invoices/receipts, remove the whole ledger row
-    const remaining = await base44.entities.Document.filter(
-      { draw_vendor_id: line.drawVendorId, document_type: { $in: ["invoice", "receipt"] } },
-      { limit: 1 }
-    );
-    if (remaining.items.length === 0) {
-      await base44.entities.DrawVendor.delete(line.drawVendorId);
+    if (!window.confirm(`Delete this ${line.docKind || "invoice"}${line.invoiceNumber ? ` (${line.invoiceNumber})` : ""}? This removes the entire vendor row from this draw, including any other invoices for it. This cannot be undone.`)) return;
+    // Remove the invoice, its vendor's other attached documents, and the whole row
+    const docs = await base44.entities.Document.filter({ draw_vendor_id: line.drawVendorId });
+    for (const d of docs.items) {
+      await base44.entities.Document.delete(d.id);
     }
+    await base44.entities.DrawVendor.delete(line.drawVendorId);
     queryClient.invalidateQueries({ queryKey: ["documents"] });
     queryClient.invalidateQueries({ queryKey: ["drawVendors"] });
   };
