@@ -64,8 +64,9 @@ export default function DocStatusButton({ line, projectName, onAddInvoice, onSug
     }
     setConfirmingDelete(false);
     // Remove the invoice, its vendor's other attached documents, and the whole row
-    const docs = await base44.entities.Document.filter({ draw_vendor_id: line.drawVendorId });
-    for (const d of docs.items) {
+    const result = await base44.entities.Document.filter({ draw_vendor_id: line.drawVendorId });
+    const docs = Array.isArray(result) ? result : result.items;
+    for (const d of docs) {
       await base44.entities.Document.delete(d.id);
     }
     await base44.entities.DrawVendor.delete(line.drawVendorId);
