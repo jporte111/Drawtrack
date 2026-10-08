@@ -4,7 +4,7 @@ import { base44 } from "@/api/base44Client";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { ExternalLink, Plus, Sparkles } from "lucide-react";
+import { ExternalLink, Plus, Sparkles, Trash2 } from "lucide-react";
 import ConditionalLienDialog from "./ConditionalLienDialog";
 import UnconditionalLienDialog from "./UnconditionalLienDialog";
 import QboTrackingCell from "./QboTrackingCell";
@@ -53,6 +53,12 @@ export default function DocStatusButton({ line, projectName, onAddInvoice, onSug
 
   const updateDoc = async (docId, patch) => {
     await base44.entities.Document.update(docId, patch);
+    queryClient.invalidateQueries({ queryKey: ["documents"] });
+  };
+
+  const handleDelete = async () => {
+    if (!window.confirm(`Delete this ${line.docKind || "invoice"}${line.invoiceNumber ? ` (${line.invoiceNumber})` : ""}? This cannot be undone.`)) return;
+    await base44.entities.Document.delete(line.invoice.id);
     queryClient.invalidateQueries({ queryKey: ["documents"] });
   };
 
@@ -158,6 +164,13 @@ export default function DocStatusButton({ line, projectName, onAddInvoice, onSug
               <div className="pt-1 border-t">
                 <Button size="sm" variant="ghost" className="h-7 text-xs w-full justify-start" onClick={handleSuggest} disabled={suggesting}>
                   <Sparkles className="w-3 h-3 mr-1" /> {suggesting ? "Suggesting..." : "Suggest category from invoice"}
+                </Button>
+              </div>
+            )}
+            {line.hasInvoice && (
+              <div className="pt-1 border-t">
+                <Button size="sm" variant="ghost" className="h-7 text-xs w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50" onClick={handleDelete}>
+                  <Trash2 className="w-3 h-3 mr-1" /> Delete {line.docKind || "Invoice"}
                 </Button>
               </div>
             )}
