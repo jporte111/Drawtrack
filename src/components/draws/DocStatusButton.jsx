@@ -48,6 +48,7 @@ export default function DocStatusButton({ line, projectName, onAddInvoice, onSug
   const [condOpen, setCondOpen] = useState(false);
   const [uncondOpen, setUncondOpen] = useState(false);
   const [suggesting, setSuggesting] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
   const status = computeStatus(line);
   const interactive = line.hasInvoice || line.recipient === "vendor";
 
@@ -57,13 +58,18 @@ export default function DocStatusButton({ line, projectName, onAddInvoice, onSug
   };
 
   const handleDelete = async () => {
-    if (!window.confirm(`Delete this ${line.docKind || "invoice"}${line.invoiceNumber ? ` (${line.invoiceNumber})` : ""}? This removes the entire vendor row from this draw, including any other invoices for it. This cannot be undone.`)) return;
+    if (!confirmingDelete) {
+      setConfirmingDelete(true);
+      return;
+    }
+    setConfirmingDelete(false);
     // Remove the invoice, its vendor's other attached documents, and the whole row
     const docs = await base44.entities.Document.filter({ draw_vendor_id: line.drawVendorId });
     for (const d of docs.items) {
       await base44.entities.Document.delete(d.id);
     }
     await base44.entities.DrawVendor.delete(line.drawVendorId);
+    setOpen(false);
     queryClient.invalidateQueries({ queryKey: ["documents"] });
     queryClient.invalidateQueries({ queryKey: ["drawVendors"] });
   };
@@ -175,8 +181,13 @@ export default function DocStatusButton({ line, projectName, onAddInvoice, onSug
             )}
             {line.hasInvoice && (
               <div className="pt-1 border-t">
-                <Button size="sm" variant="ghost" className="h-7 text-xs w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50" onClick={handleDelete}>
-                  <Trash2 className="w-3 h-3 mr-1" /> Delete {line.docKind || "Invoice"}
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className={`h-7 text-xs w-full justify-start ${confirmingDelete ? "bg-red-600 text-white hover:bg-red-700 hover:text-white" : "text-red-600 hover:text-red-700 hover:bg-red-50"}`}
+                  onClick={handleDelete}
+                >
+                  <Trash2 className="w-3 h-3 mr-1" /> {confirmingDelete ? "Click again to confirm delete" : `Delete ${line.docKind || "Invoice"} / remove row`}
                 </Button>
               </div>
             )}
