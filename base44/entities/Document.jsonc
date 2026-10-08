@@ -98,18 +98,7 @@
   "rls": {
     "create": null,
     "read": true,
-    "update": {
-      "$or": [
-        {
-          "created_by_id": "{{user.id}}"
-        },
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        }
-      ]
-    },
+    "update": true,
     "delete": true
   }
 }
