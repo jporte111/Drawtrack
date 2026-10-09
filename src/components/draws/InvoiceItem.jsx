@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Upload, Loader2, CheckCircle, X } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-const EXTRACTION_SCHEMA = {
+export const EXTRACTION_SCHEMA = {
   type: "object",
   properties: {
     vendor_name: { type: "string", description: "Name of the vendor/company that issued this invoice or receipt" },

@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { ExternalLink, Plus, Sparkles, Trash2 } from "lucide-react";
 import ConditionalLienDialog from "./ConditionalLienDialog";
+import AttachInvoiceFileDialog from "./AttachInvoiceFileDialog";
 import UnconditionalLienDialog from "./UnconditionalLienDialog";
 import QboTrackingCell from "./QboTrackingCell";
 
@@ -49,6 +50,7 @@ export default function DocStatusButton({ line, projectName, onAddInvoice, onSug
   const [uncondOpen, setUncondOpen] = useState(false);
   const [suggesting, setSuggesting] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [attachOpen, setAttachOpen] = useState(false);
   const status = computeStatus(line);
   const interactive = line.hasInvoice || line.recipient === "vendor";
 
@@ -117,7 +119,7 @@ export default function DocStatusButton({ line, projectName, onAddInvoice, onSug
                   <ExternalLink className="w-3 h-3" /> Open
                 </a>
               ) : line.hasInvoice ? (
-                <span className="text-xs text-slate-400">Missing file</span>
+                <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => { setOpen(false); setAttachOpen(true); }}>Add</Button>
               ) : (
                 <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => { setOpen(false); onAddInvoice(line.drawVendorId); }}>
                   <Plus className="w-3 h-3 mr-1" /> Add Invoice
@@ -196,6 +198,14 @@ export default function DocStatusButton({ line, projectName, onAddInvoice, onSug
         </PopoverContent>
       </Popover>
 
+      {attachOpen && (
+        <AttachInvoiceFileDialog
+          open
+          onOpenChange={(o) => !o && setAttachOpen(false)}
+          invoice={line.invoice}
+          vendorName={line.vendorName}
+        />
+      )}
       {condOpen && (
         <ConditionalLienDialog
           open
