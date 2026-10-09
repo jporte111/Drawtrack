@@ -165,6 +165,11 @@ export default function InvoiceLedger({ drawId }) {
     queryClient.invalidateQueries({ queryKey: ["drawVendors", drawId] });
   };
 
+  const updateInvoiceAmount = async (docId, amount) => {
+    await base44.entities.Document.update(docId, { amount });
+    queryClient.invalidateQueries({ queryKey: ["documents"] });
+  };
+
   const budgetRef = useRef(null);
   const ensureBudget = async () => {
     if (budgetRef.current) return budgetRef.current;
@@ -342,7 +347,13 @@ export default function InvoiceLedger({ drawId }) {
                           </td>
                           <td className="px-3 py-2.5 text-slate-600 align-top">{line.invoiceDate ? formatDate(line.invoiceDate) : "—"}</td>
                           <td className="px-3 py-2.5 text-right tabular-nums font-medium text-slate-900 align-top">
-                            {line.validAmount == null ? (
+                            {line.validAmount == null && line.hasInvoice ? (
+                              <EditableAmount
+                                amount={line.invoice.amount || 0}
+                                onSave={(v) => updateInvoiceAmount(line.invoice.id, v)}
+                                className="justify-end"
+                              />
+                            ) : line.validAmount == null ? (
                               <span className="text-amber-600 text-xs font-medium">Amount Needs Review</span>
                             ) : line.hasInvoice ? (
                               formatCurrency(line.validAmount)
