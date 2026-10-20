@@ -356,7 +356,11 @@ export default function InvoiceLedger({ drawId }) {
                             ) : line.validAmount == null ? (
                               <span className="text-amber-600 text-xs font-medium">Amount Needs Review</span>
                             ) : line.hasInvoice ? (
-                              formatCurrency(line.validAmount)
+                              <EditableAmount
+                                amount={line.validAmount}
+                                onSave={(v) => updateInvoiceAmount(line.invoice.id, v)}
+                                className="justify-end"
+                              />
                             ) : (
                               <EditableAmount
                                 amount={line.validAmount || 0}
