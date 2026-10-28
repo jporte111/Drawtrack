@@ -115,6 +115,8 @@ export default function InvoiceLedger({ drawId }) {
         recipient,
         clientVendorId: cvId,
         vendorTotal,
+        scopeOfWork: dv.scope_of_work || "",
+        notes: dv.notes || "",
       };
       if (invoices.length > 0) {
         invoices.forEach((inv, i) => {
@@ -328,7 +330,23 @@ export default function InvoiceLedger({ drawId }) {
                       </tr>
                       {group.lines.map((line) => (
                         <tr key={line.id} className="border-b last:border-0 hover:bg-slate-50">
-                          <td className="px-3 py-2.5 font-medium text-slate-900 align-top">{line.vendorName}</td>
+                          <td className="px-3 py-2.5 font-medium text-slate-900 align-top">
+                            <div>{line.vendorName}</div>
+                            {(!line.hasInvoice || line.index === 0) && (
+                              <>
+                                {line.scopeOfWork && (
+                                  <div className="mt-1 max-w-[240px] text-xs font-normal whitespace-pre-line text-slate-500">
+                                    {line.scopeOfWork}
+                                  </div>
+                                )}
+                                {line.notes && (
+                                  <div className="mt-1 max-w-[240px] text-xs font-normal italic whitespace-pre-line text-slate-400">
+                                    {line.notes}
+                                  </div>
+                                )}
+                              </>
+                            )}
+                          </td>
                           <td className="px-3 py-2.5 text-slate-600 align-top">{line.categoryName}</td>
                           <td className="px-3 py-2.5 align-top">
                             {line.hasInvoice ? (
