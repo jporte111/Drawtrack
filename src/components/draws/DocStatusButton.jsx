@@ -223,6 +223,7 @@ export default function DocStatusButton({ line, projectName, onAddInvoice, onSug
           open
           onOpenChange={(o) => !o && setUncondOpen(false)}
           clientVendorId={line.clientVendorId}
+          drawVendorId={line.drawVendorId}
           vendorName={line.vendorName}
           projectName={projectName}
           drawAmount={line.vendorTotal}

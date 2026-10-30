@@ -27,7 +27,7 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
-    const { form_type, vendor_name, project_name, draw_amount, debug } = body;
+    const { form_type, vendor_name, project_name, draw_amount, fields = {}, debug } = body;
 
     if (!form_type) {
       return Response.json({ error: 'Missing form_type' }, { status: 400 });
@@ -48,20 +48,55 @@ Deno.serve(async (req) => {
       return Response.json({ formFields: fields });
     }
 
-    if (!vendor_name || !project_name) {
-      return Response.json({ error: 'Missing required fields: vendor_name, project_name' }, { status: 400 });
+    const claimant = (fields.claimant || vendor_name || '').toString().trim();
+    if (!claimant) {
+      return Response.json({ error: 'Missing required field: claimant (vendor name)' }, { status: 400 });
     }
 
-    // Fill AcroForm fields by name
+    const formatMoney = (v) => {
+      if (v === null || v === undefined || v === '') return '';
+      const n = Number(v);
+      if (!isFinite(n)) return '';
+      return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    };
+
+    const formatDate = (v) => {
+      if (!v) return '';
+      const s = String(v).trim();
+      const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+      if (iso) return `${iso[2]}/${iso[3]}/${iso[1]}`;
+      return s;
+    };
+
+    // Fill AcroForm fields by name — every field that exists on this template
     const form = pdfDoc.getForm();
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const available = new Set(form.getFields().map((f) => f.getName()));
 
-    form.getTextField('claimant').setText(vendor_name);
-    form.getTextField('location').setText(project_name);
+    const checkAmount = fields.amount ?? draw_amount;
+    const values = {
+      claimant,
+      customer: fields.customer || '',
+      location: fields.location || project_name || '',
+      owner: fields.owner || '',
+      'through date': formatDate(fields.through_date),
+      date: formatDate(fields.date),
+      maker: fields.maker || '',
+      payable: fields.payable || fields.payable_to || '',
+      amount: formatMoney(checkAmount),
+      amount_2: formatMoney(checkAmount),
+      affect: fields.affect || '',
+      title: fields.title || '',
+    };
 
-    if (draw_amount) {
-      const amountStr = Number(draw_amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-      form.getTextField('amount').setText(amountStr);
+    for (const [name, raw] of Object.entries(values)) {
+      const value = String(raw ?? '').trim();
+      if (!value || !available.has(name)) continue;
+      try {
+        form.getTextField(name).setText(value);
+      } catch (e) {
+        // Skip fields that cannot be written as text
+      }
     }
 
     form.updateFieldAppearances(font);

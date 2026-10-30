@@ -1,15 +1,29 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Loader2, FileText, Upload } from "lucide-react";
-import { formatCurrency } from "@/lib/format";
+import LienFormFields from "./LienFormFields";
+import useLienContext from "@/hooks/useLienContext";
 
-export default function UnconditionalLienDialog({ open, onOpenChange, clientVendorId, vendorName, projectName, drawAmount }) {
+export default function UnconditionalLienDialog({ open, onOpenChange, clientVendorId, drawVendorId, vendorName, projectName, drawAmount }) {
   const queryClient = useQueryClient();
   const [busy, setBusy] = useState(null); // 'generate' | 'upload'
   const [error, setError] = useState(null);
+  const { client, drawCycle } = useLienContext({ drawVendorId, clientVendorId });
+  const [fields, setFields] = useState({});
+
+  useEffect(() => {
+    if (!open) return;
+    setFields({
+      customer: client?.name || "",
+      owner: client?.name || "",
+      location: client?.address || drawCycle?.project_name || projectName || "",
+      throughDate: drawCycle?.draw_date || "",
+      amount: drawAmount ?? "",
+    });
+  }, [open, client?.id, drawCycle?.id]);
 
   const refresh = () => {
     queryClient.invalidateQueries({ queryKey: ["documents"] });
@@ -24,6 +38,14 @@ export default function UnconditionalLienDialog({ open, onOpenChange, clientVend
         vendor_name: vendorName,
         project_name: projectName,
         draw_amount: drawAmount,
+        fields: {
+          claimant: vendorName,
+          customer: fields.customer,
+          owner: fields.owner,
+          location: fields.location,
+          through_date: fields.throughDate,
+          amount: fields.amount === "" ? null : Number(fields.amount),
+        },
       });
       const data = res.data;
       const byteChars = atob(data.pdf_base64);
@@ -76,15 +98,16 @@ export default function UnconditionalLienDialog({ open, onOpenChange, clientVend
         <DialogHeader>
           <DialogTitle>Unconditional Lien Release</DialogTitle>
           <DialogDescription>
-            One per vendor per client. Generate a pre-filled form or upload a signed copy.
+            One per vendor per client. Pre-filled from this draw — review the fields, then generate or upload a signed copy.
           </DialogDescription>
         </DialogHeader>
 
         <div className="bg-slate-50 rounded-lg p-4 space-y-2 text-sm mb-2">
           <div className="flex justify-between"><span className="text-slate-500">Vendor (Claimant):</span><span className="font-medium text-slate-900">{vendorName}</span></div>
-          <div className="flex justify-between"><span className="text-slate-500">Project:</span><span className="font-medium text-slate-900">{projectName || "—"}</span></div>
-          <div className="flex justify-between"><span className="text-slate-500">Amount:</span><span className="font-medium text-slate-900">{formatCurrency(drawAmount || 0)}</span></div>
+          <div className="flex justify-between"><span className="text-slate-500">Project:</span><span className="font-medium text-slate-900">{drawCycle?.project_name || projectName || "—"}</span></div>
         </div>
+
+        <LienFormFields values={fields} onChange={setFields} />
 
         {error && <p className="text-sm text-red-600">{error}</p>}
 
