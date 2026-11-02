@@ -98,11 +98,11 @@ export default function DrawFormDialog({ open, onOpenChange, draw, clientId }) {
               <Input type="number" value={form.lender_current_payment_due} onChange={(e) => setForm({ ...form, lender_current_payment_due: e.target.value })} placeholder="0" />
             </div>
             <div className="space-y-1.5">
-              <Label>Application Cert URL (AIA G702)</Label>
+              <Label>Application Cert URL (AIA G702) <span className="text-slate-400 font-normal">optional</span></Label>
               <Input value={form.application_cert_url} onChange={(e) => setForm({ ...form, application_cert_url: e.target.value })} placeholder="https://..." />
             </div>
             <div className="space-y-1.5">
-              <Label>Continuation Sheet URL (AIA G703)</Label>
+              <Label>Continuation Sheet URL (AIA G703) <span className="text-slate-400 font-normal">optional</span></Label>
               <Input value={form.continuation_sheet_url} onChange={(e) => setForm({ ...form, continuation_sheet_url: e.target.value })} placeholder="https://..." />
             </div>
           </div>

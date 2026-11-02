@@ -133,13 +133,13 @@ export default function LenderReconciliation({ drawId }) {
 
       <div className="grid sm:grid-cols-2 gap-3">
         <DocLinkField
-          label="Application Cert (AIA G702)"
+          label="Application Cert (AIA G702) — optional"
           value={draw?.application_cert_url}
           onSave={(v) => updateDraw({ application_cert_url: v || null })}
           saving={savingField === "application_cert_url"}
         />
         <DocLinkField
-          label="Continuation Sheet (AIA G703)"
+          label="Continuation Sheet (AIA G703) — optional"
           value={draw?.continuation_sheet_url}
           onSave={(v) => updateDraw({ continuation_sheet_url: v || null })}
           saving={savingField === "continuation_sheet_url"}
