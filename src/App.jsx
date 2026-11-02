@@ -18,6 +18,8 @@ import DrawDetail from '@/pages/DrawDetail';
 import VendorList from '@/pages/VendorList';
 import MasterVendorList from '@/pages/MasterVendorList';
 import Budget from '@/pages/Budget';
+import ReleaseContacts from '@/pages/ReleaseContacts';
+import ReleaseEmailLog from '@/pages/ReleaseEmailLog';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -52,6 +54,8 @@ const AuthenticatedApp = () => {
         <Route path="/vendors" element={<MasterVendorList />} />
         <Route path="/draws/:id" element={<DrawDetail />} />
         <Route path="/clients/:clientId/budget" element={<Budget />} />
+        <Route path="/clients/:clientId/contacts" element={<ReleaseContacts />} />
+        <Route path="/release-emails" element={<ReleaseEmailLog />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>

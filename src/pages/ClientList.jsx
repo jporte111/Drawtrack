@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
-import { Plus, ClipboardList, Users, Building2, DollarSign, FileWarning } from "lucide-react";
+import { Plus, ClipboardList, Users, Building2, DollarSign, FileWarning, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ClientFormDialog from "@/components/clients/ClientFormDialog";
 import ClientActionsMenu from "@/components/clients/ClientActionsMenu";
@@ -104,7 +104,7 @@ export default function ClientList() {
                   </div>
                 );
               })()}
-              <div className="grid grid-cols-3 gap-1.5 mt-auto">
+              <div className="grid grid-cols-2 gap-1.5 mt-auto">
                 <Link to={`/clients/${client.id}/draws`}>
                   <Button variant="outline" size="sm" className="w-full px-2 gap-1 text-xs">
                     <ClipboardList className="w-3.5 h-3.5" />Draws
@@ -118,6 +118,11 @@ export default function ClientList() {
                 <Link to={`/clients/${client.id}/budget`}>
                   <Button variant="outline" size="sm" className="w-full px-2 gap-1 text-xs">
                     <DollarSign className="w-3.5 h-3.5" />Budget
+                  </Button>
+                </Link>
+                <Link to={`/clients/${client.id}/contacts`}>
+                  <Button variant="outline" size="sm" className="w-full px-2 gap-1 text-xs">
+                    <Mail className="w-3.5 h-3.5" />Contacts
                   </Button>
                 </Link>
               </div>

@@ -1,0 +1,64 @@
+{
+  "name": "ReleaseEmailLog",
+  "type": "object",
+  "properties": {
+    "client_id": {
+      "type": "string"
+    },
+    "client_name": {
+      "type": "string"
+    },
+    "document_id": {
+      "type": "string"
+    },
+    "document_type": {
+      "type": "string"
+    },
+    "draw_cycle_name": {
+      "type": "string"
+    },
+    "vendor_name": {
+      "type": "string"
+    },
+    "invoice_number": {
+      "type": "string"
+    },
+    "invoice_amount": {
+      "type": "number"
+    },
+    "recipients": {
+      "type": "string"
+    },
+    "cc_recipients": {
+      "type": "string"
+    },
+    "subject": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "sent",
+        "failed",
+        "previewed",
+        "duplicate"
+      ],
+      "default": "sent"
+    },
+    "error_message": {
+      "type": "string"
+    },
+    "sent_at": {
+      "type": "string"
+    },
+    "resend_of": {
+      "type": "string"
+    }
+  },
+  "rls": {
+    "create": null,
+    "read": true,
+    "update": true,
+    "delete": true
+  }
+}

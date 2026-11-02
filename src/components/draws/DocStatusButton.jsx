@@ -4,11 +4,12 @@ import { base44 } from "@/api/base44Client";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { ExternalLink, Plus, Sparkles, Trash2 } from "lucide-react";
+import { ExternalLink, Mail, Plus, Sparkles, Trash2 } from "lucide-react";
 import ConditionalLienDialog from "./ConditionalLienDialog";
 import AttachInvoiceFileDialog from "./AttachInvoiceFileDialog";
 import UnconditionalLienDialog from "./UnconditionalLienDialog";
 import QboTrackingCell from "./QboTrackingCell";
+import ReleaseEmailDialog from "@/components/releases/ReleaseEmailDialog";
 
 const REVIEW_OPTIONS = ["needs_review", "approved", "needs_correction"];
 const reviewBadge = {
@@ -51,6 +52,7 @@ export default function DocStatusButton({ line, projectName, onAddInvoice, onSug
   const [suggesting, setSuggesting] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [attachOpen, setAttachOpen] = useState(false);
+  const [emailDocId, setEmailDocId] = useState(null);
   const status = computeStatus(line);
   const interactive = line.hasInvoice || line.recipient === "vendor";
 
@@ -130,9 +132,14 @@ export default function DocStatusButton({ line, projectName, onAddInvoice, onSug
             {line.hasInvoice && (
               <ReqRow ok={!!line.cond?.file_url} label="Conditional lien release">
                 {line.cond?.file_url ? (
-                  <a href={line.cond.file_url} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline inline-flex items-center gap-1">
-                    <ExternalLink className="w-3 h-3" /> Open
-                  </a>
+                  <div className="flex items-center gap-1">
+                    <a href={line.cond.file_url} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline inline-flex items-center gap-1">
+                      <ExternalLink className="w-3 h-3" /> Open
+                    </a>
+                    <Button size="sm" variant="ghost" className="h-6 px-1.5 text-xs" onClick={() => { setOpen(false); setEmailDocId(line.cond.id); }}>
+                      <Mail className="w-3 h-3 mr-1" />Email
+                    </Button>
+                  </div>
                 ) : (
                   <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => { setOpen(false); setCondOpen(true); }}>Add</Button>
                 )}
@@ -142,9 +149,14 @@ export default function DocStatusButton({ line, projectName, onAddInvoice, onSug
             {line.hasInvoice && line.clientVendorId && (
               <ReqRow ok={!!line.uncond?.file_url} label="Unconditional lien release">
                 {line.uncond?.file_url ? (
-                  <a href={line.uncond.file_url} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline inline-flex items-center gap-1">
-                    <ExternalLink className="w-3 h-3" /> Open
-                  </a>
+                  <div className="flex items-center gap-1">
+                    <a href={line.uncond.file_url} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline inline-flex items-center gap-1">
+                      <ExternalLink className="w-3 h-3" /> Open
+                    </a>
+                    <Button size="sm" variant="ghost" className="h-6 px-1.5 text-xs" onClick={() => { setOpen(false); setEmailDocId(line.uncond.id); }}>
+                      <Mail className="w-3 h-3 mr-1" />Email
+                    </Button>
+                  </div>
                 ) : (
                   <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => { setOpen(false); setUncondOpen(true); }}>Add</Button>
                 )}
@@ -198,6 +210,13 @@ export default function DocStatusButton({ line, projectName, onAddInvoice, onSug
         </PopoverContent>
       </Popover>
 
+      {emailDocId && (
+        <ReleaseEmailDialog
+          open
+          onOpenChange={(o) => !o && setEmailDocId(null)}
+          documentId={emailDocId}
+        />
+      )}
       {attachOpen && (
         <AttachInvoiceFileDialog
           open

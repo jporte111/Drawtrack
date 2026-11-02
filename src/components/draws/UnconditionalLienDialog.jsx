@@ -6,11 +6,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Loader2, FileText, Upload } from "lucide-react";
 import LienFormFields from "./LienFormFields";
 import useLienContext from "@/hooks/useLienContext";
+import { useToast } from "@/components/ui/use-toast";
 
 export default function UnconditionalLienDialog({ open, onOpenChange, clientVendorId, drawVendorId, vendorName, projectName, drawAmount }) {
   const queryClient = useQueryClient();
   const [busy, setBusy] = useState(null); // 'generate' | 'upload'
   const [error, setError] = useState(null);
+  const { toast } = useToast();
   const { client, drawCycle } = useLienContext({ drawVendorId, clientVendorId });
   const [fields, setFields] = useState({});
 
@@ -27,6 +29,24 @@ export default function UnconditionalLienDialog({ open, onOpenChange, clientVend
 
   const refresh = () => {
     queryClient.invalidateQueries({ queryKey: ["documents"] });
+  };
+
+  const emailRelease = async (docId) => {
+    if (!docId) return;
+    try {
+      const res = await base44.functions.invoke("sendReleaseEmail", { document_id: docId, mode: "send" });
+      const data = res.data || {};
+      queryClient.invalidateQueries({ queryKey: ["releaseEmailLogs"] });
+      if (data.ok) {
+        toast({ title: "Release emailed", description: `Sent to ${(data.recipients || []).length} release contact(s).` });
+      } else if (data.reason === "no_release_contacts") {
+        toast({ title: "Release saved", description: "No active release contacts for this client." });
+      } else if (data.reason === "send_failed") {
+        toast({ variant: "destructive", title: "Release email failed", description: data.error || "See the Release emails log." });
+      }
+    } catch (e) {
+      // Email problems must never block saving the release
+    }
   };
 
   const handleGenerate = async () => {
@@ -53,7 +73,7 @@ export default function UnconditionalLienDialog({ open, onOpenChange, clientVend
       for (let i = 0; i < byteChars.length; i++) bytes[i] = byteChars.charCodeAt(i);
       const file = new File([bytes], data.filename, { type: "application/pdf" });
       const up = await base44.integrations.Core.UploadFile({ file });
-      await base44.entities.Document.create({
+      const created = await base44.entities.Document.create({
         client_vendor_id: clientVendorId,
         document_type: "unconditional_lien_release",
         status: "complete",
@@ -62,6 +82,7 @@ export default function UnconditionalLienDialog({ open, onOpenChange, clientVend
       });
       refresh();
       onOpenChange(false);
+      emailRelease(created.id);
     } catch (e) {
       setError(e.message || "Failed to generate form");
     } finally {

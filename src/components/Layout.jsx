@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { Outlet, Link, useLocation } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
-import { HardHat, ClipboardList, Users, Menu, X, ChevronDown, ChevronRight, FolderOpen, Building2, DollarSign } from "lucide-react";
+import { HardHat, ClipboardList, Users, Menu, X, ChevronDown, ChevronRight, FolderOpen, Building2, DollarSign, Mail } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default function Layout() {
@@ -66,6 +66,18 @@ export default function Layout() {
           All Vendors
         </Link>
 
+        <Link
+          to="/release-emails"
+          onClick={() => setSidebarOpen(false)}
+          className={cn(
+            "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+            location.pathname === "/release-emails" ? "bg-slate-800 text-white" : "text-slate-400 hover:text-white hover:bg-slate-800/50"
+          )}
+        >
+          <Mail className="w-4 h-4" />
+          Release emails
+        </Link>
+
         <div className="pt-3">
           <div className="px-3 py-1 text-xs font-semibold text-slate-500 uppercase tracking-wide">Clients</div>
           {clients.length === 0 ? (
@@ -121,6 +133,17 @@ export default function Layout() {
                       >
                         <DollarSign className="w-3.5 h-3.5" />
                         Budget
+                      </Link>
+                      <Link
+                        to={`/clients/${client.id}/contacts`}
+                        onClick={() => setSidebarOpen(false)}
+                        className={cn(
+                          "flex items-center gap-2.5 px-3 py-1.5 rounded-md text-sm transition-colors",
+                          location.pathname === `/clients/${client.id}/contacts` ? "bg-slate-800 text-white" : "text-slate-400 hover:text-white hover:bg-slate-800/50"
+                        )}
+                      >
+                        <Mail className="w-3.5 h-3.5" />
+                        Release contacts
                       </Link>
                     </div>
                   )}

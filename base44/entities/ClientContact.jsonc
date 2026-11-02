@@ -1,0 +1,55 @@
+{
+  "name": "ClientContact",
+  "type": "object",
+  "properties": {
+    "client_id": {
+      "type": "string"
+    },
+    "name": {
+      "type": "string"
+    },
+    "role": {
+      "type": "string",
+      "enum": [
+        "owner",
+        "co_owner",
+        "owner_attorney",
+        "lender",
+        "architect",
+        "other"
+      ],
+      "default": "other"
+    },
+    "email": {
+      "type": "string",
+      "format": "email"
+    },
+    "phone": {
+      "type": "string"
+    },
+    "receives_releases": {
+      "type": "boolean",
+      "default": true
+    },
+    "active": {
+      "type": "boolean",
+      "default": true
+    },
+    "source": {
+      "type": "string"
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "client_id",
+    "email"
+  ],
+  "rls": {
+    "create": null,
+    "read": true,
+    "update": true,
+    "delete": true
+  }
+}

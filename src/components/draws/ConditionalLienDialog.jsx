@@ -6,11 +6,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Loader2, FileText, Upload } from "lucide-react";
 import LienFormFields from "./LienFormFields";
 import useLienContext from "@/hooks/useLienContext";
+import { useToast } from "@/components/ui/use-toast";
 
 export default function ConditionalLienDialog({ open, onOpenChange, drawVendorId, invoiceId, vendorName, projectName, drawAmount, existingDocId }) {
   const queryClient = useQueryClient();
   const [busy, setBusy] = useState(null); // 'generate' | 'upload'
   const [error, setError] = useState(null);
+  const { toast } = useToast();
   const { client, drawCycle } = useLienContext({ drawVendorId });
   const [fields, setFields] = useState({});
 
@@ -29,6 +31,24 @@ export default function ConditionalLienDialog({ open, onOpenChange, drawVendorId
 
   const refresh = () => {
     queryClient.invalidateQueries({ queryKey: ["documents"] });
+  };
+
+  const emailRelease = async (docId) => {
+    if (!docId) return;
+    try {
+      const res = await base44.functions.invoke("sendReleaseEmail", { document_id: docId, mode: "send" });
+      const data = res.data || {};
+      queryClient.invalidateQueries({ queryKey: ["releaseEmailLogs"] });
+      if (data.ok) {
+        toast({ title: "Release emailed", description: `Sent to ${(data.recipients || []).length} release contact(s).` });
+      } else if (data.reason === "no_release_contacts") {
+        toast({ title: "Release saved", description: "No active release contacts for this client." });
+      } else if (data.reason === "send_failed") {
+        toast({ variant: "destructive", title: "Release email failed", description: data.error || "See the Release emails log." });
+      }
+    } catch (e) {
+      // Email problems must never block saving the release
+    }
   };
 
   const handleGenerate = async () => {
@@ -65,13 +85,16 @@ export default function ConditionalLienDialog({ open, onOpenChange, drawVendorId
         file_url: up.file_url,
         source: "manual",
       };
+      let savedDocId = existingDocId;
       if (existingDocId) {
         await base44.entities.Document.update(existingDocId, payload);
       } else {
-        await base44.entities.Document.create(payload);
+        const created = await base44.entities.Document.create(payload);
+        savedDocId = created.id;
       }
       refresh();
       onOpenChange(false);
+      emailRelease(savedDocId);
     } catch (e) {
       setError(e.message || "Failed to generate form");
     } finally {
