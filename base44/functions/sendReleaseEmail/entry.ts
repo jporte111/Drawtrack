@@ -1,40 +1,10 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.54';
+import { collectEmails, formatMoney, graphRequest, toBase64 } from "../../shared/outlookMail.ts";
 
 const CC_EMAIL = "jose@jlmdevelopmentinc.com";
 // Single configurable sender. Leave blank to send from the connected Outlook mailbox.
 const SENDER_OVERRIDE = "";
 const RELEASE_TYPES = ["conditional_lien_release", "unconditional_lien_release"];
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-function formatMoney(v) {
-  const n = Number(v);
-  if (!isFinite(n)) return "";
-  return n.toLocaleString("en-US", { style: "currency", currency: "USD" });
-}
-
-function toBase64(bytes) {
-  let binary = "";
-  const chunkSize = 0x8000;
-  for (let i = 0; i < bytes.length; i += chunkSize) {
-    binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunkSize));
-  }
-  return btoa(binary);
-}
-
-async function graphRequest(accessToken, path, options = {}) {
-  const res = await fetch(`https://graph.microsoft.com/v1.0${path}`, {
-    ...options,
-    signal: AbortSignal.timeout(30000),
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      "Content-Type": "application/json",
-      ...(options.headers || {}),
-    },
-  });
-  if (!res.ok) throw new Error(`Graph API error: ${res.status} ${await res.text()}`);
-  const text = await res.text();
-  return text ? JSON.parse(text) : null;
-}
 
 async function getRecord(base44, entityName, id) {
   if (!id) return null;
@@ -100,18 +70,13 @@ export default async function(req) {
     const contacts = clientId
       ? asList(await base44.entities.ClientContact.filter({ client_id: clientId, active: true, receives_releases: true }))
       : [];
-    const recipients = [];
-    const seen = new Set();
-    const addEmail = (raw) => {
-      const email = String(raw || "").trim();
-      if (!EMAIL_RE.test(email)) return;
-      const key = email.toLowerCase();
-      if (key === CC_EMAIL.toLowerCase() || seen.has(key)) return;
-      seen.add(key);
-      recipients.push(email);
-    };
-    contacts.forEach((c) => addEmail(c.email));
-    (Array.isArray(extra_recipients) ? extra_recipients : []).forEach(addEmail);
+    const recipients = collectEmails(
+      [
+        ...contacts.map((c) => c.email),
+        ...(Array.isArray(extra_recipients) ? extra_recipients : []),
+      ],
+      { exclude: [CC_EMAIL] },
+    );
 
     if (recipients.length === 0) {
       return Response.json({ ok: false, reason: "no_release_contacts", client_name: clientName });

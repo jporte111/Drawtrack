@@ -1,0 +1,91 @@
+{
+  "name": "ClientInvoice",
+  "type": "object",
+  "properties": {
+    "client_id": {
+      "type": "string"
+    },
+    "draw_cycle_id": {
+      "type": "string"
+    },
+    "invoice_number": {
+      "type": "string"
+    },
+    "invoice_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "due_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "sent",
+        "paid",
+        "void"
+      ],
+      "default": "draft",
+      "enumColors": [
+        "gray",
+        "blue",
+        "green",
+        "red"
+      ]
+    },
+    "bill_to_name": {
+      "type": "string"
+    },
+    "bill_to_email": {
+      "type": "string",
+      "format": "email"
+    },
+    "bill_to_address": {
+      "type": "string"
+    },
+    "project_name": {
+      "type": "string"
+    },
+    "draw_name": {
+      "type": "string"
+    },
+    "line_items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "amount": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    "total": {
+      "type": "number"
+    },
+    "notes": {
+      "type": "string"
+    },
+    "sent_at": {
+      "type": "string"
+    },
+    "sent_to": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "client_id",
+    "invoice_number"
+  ],
+  "rls": {
+    "create": null,
+    "read": true,
+    "update": true,
+    "delete": true
+  }
+}

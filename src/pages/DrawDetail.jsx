@@ -16,6 +16,7 @@ import DrawFormDialog from "@/components/draws/DrawFormDialog";
 import InvoiceLedger from "@/components/draws/InvoiceLedger";
 import LenderReconciliation from "@/components/draws/LenderReconciliation";
 import VoucherSection from "@/components/draws/VoucherSection";
+import ClientInvoiceSection from "@/components/invoices/ClientInvoiceSection";
 
 export default function DrawDetail() {
   const { id } = useParams();
@@ -115,6 +116,9 @@ export default function DrawDetail() {
       )}
       <div className="bg-white border rounded-xl p-4 md:p-5 mb-4">
         <InvoiceLedger drawId={id} />
+      </div>
+      <div className="bg-white border rounded-xl p-4 md:p-5 mb-4">
+        <ClientInvoiceSection drawId={id} />
       </div>
       {showVouchers && (
         <div className="bg-white border rounded-xl p-4 md:p-5">
