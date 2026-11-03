@@ -37,7 +37,13 @@ export default function AddVendorDialog({ open, onOpenChange, drawId, clientId }
 
   const linkedIds = new Set(drawVendors.map((dv) => dv.vendor_id));
   const clientLinkedIds = new Set(clientVendors.map((cv) => cv.vendor_id));
-  const availableVendors = vendors.filter((v) => !linkedIds.has(v.id) && clientLinkedIds.has(v.id));
+  const availableVendors = vendors
+    .filter((v) => clientLinkedIds.has(v.id))
+    .sort((a, b) => {
+      const aIn = linkedIds.has(a.id) ? 1 : 0;
+      const bIn = linkedIds.has(b.id) ? 1 : 0;
+      return aIn - bIn || (a.name || "").localeCompare(b.name || "");
+    });
   const ensureClientLink = async (vendorId) => {
     if (!clientId || clientLinkedIds.has(vendorId)) return;
     await base44.entities.ClientVendor.create({ client_id: clientId, vendor_id: vendorId, status: "active" });
@@ -55,11 +61,23 @@ export default function AddVendorDialog({ open, onOpenChange, drawId, clientId }
   }, [open]);
 
   const handleCreateVendor = async () => {
-    if (!newVendorName.trim()) return;
+    const name = newVendorName.trim();
+    if (!name) return;
     setCreatingVendor(true);
     try {
+      // Reuse an existing vendor with the same name instead of creating a duplicate
+      const existing = vendors.find(
+        (v) => (v.name || "").trim().toLowerCase() === name.toLowerCase()
+      );
+      if (existing) {
+        await ensureClientLink(existing.id);
+        setForm((f) => ({ ...f, vendor_id: existing.id }));
+        setShowNewVendor(false);
+        setNewVendorName("");
+        return;
+      }
       const newVendor = await base44.entities.Vendor.create({
-        name: newVendorName.trim(),
+        name,
         vendor_type: "other",
         status: "active",
         client_id: clientId,
@@ -241,7 +259,11 @@ export default function AddVendorDialog({ open, onOpenChange, drawId, clientId }
                   <SelectTrigger><SelectValue placeholder="Select vendor" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="__new__" className="font-medium text-primary">+ Add New Vendor</SelectItem>
-                    {availableVendors.map((v) => <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>)}
+                    {availableVendors.map((v) => (
+                      <SelectItem key={v.id} value={v.id}>
+                        {v.name}{linkedIds.has(v.id) ? " (already in draw)" : ""}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
