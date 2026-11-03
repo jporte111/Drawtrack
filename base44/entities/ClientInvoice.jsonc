@@ -71,6 +71,12 @@
     "notes": {
       "type": "string"
     },
+    "pay_url": {
+      "type": "string"
+    },
+    "payment_instructions": {
+      "type": "string"
+    },
     "sent_at": {
       "type": "string"
     },

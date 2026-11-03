@@ -57,6 +57,8 @@ export default function ClientInvoiceDialog({ open, onOpenChange, drawId, invoic
     bill_to_email: "",
     bill_to_address: "",
     notes: "",
+    pay_url: "",
+    payment_instructions: "",
     line_items: [{ description: "", amount: "" }],
   });
 
@@ -112,6 +114,8 @@ export default function ClientInvoiceDialog({ open, onOpenChange, drawId, invoic
         bill_to_email: invoice.bill_to_email || "",
         bill_to_address: invoice.bill_to_address || "",
         notes: invoice.notes || "",
+        pay_url: invoice.pay_url || "",
+        payment_instructions: invoice.payment_instructions || "",
         line_items:
           Array.isArray(invoice.line_items) && invoice.line_items.length > 0
             ? invoice.line_items.map((li) => ({
@@ -135,6 +139,8 @@ export default function ClientInvoiceDialog({ open, onOpenChange, drawId, invoic
       bill_to_email: "",
       bill_to_address: client.address || "",
       notes: "",
+      pay_url: "",
+      payment_instructions: "",
       line_items: lines.length > 0 ? lines : [{ description: "", amount: "" }],
     });
   }, [open, isEdit, invoice, draw, client, drawVendors, vendors, documents, categories, clientInvoices]);
@@ -172,6 +178,8 @@ export default function ClientInvoiceDialog({ open, onOpenChange, drawId, invoic
         bill_to_email: form.bill_to_email,
         bill_to_address: form.bill_to_address,
         notes: form.notes,
+        pay_url: form.pay_url,
+        payment_instructions: form.payment_instructions,
         line_items: form.line_items.map((li) => ({
           description: li.description || "",
           amount: Number(li.amount) || 0,
@@ -275,6 +283,27 @@ export default function ClientInvoiceDialog({ open, onOpenChange, drawId, invoic
           <div className="space-y-1.5">
             <Label>Notes</Label>
             <Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={2} placeholder="Optional note printed on the invoice" />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label>Online Payment Link</Label>
+              <Input
+                value={form.pay_url}
+                onChange={(e) => setForm({ ...form, pay_url: e.target.value })}
+                placeholder="https://..."
+              />
+              <p className="text-xs text-slate-500">Shown as a "Pay Online" button on the client's invoice.</p>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Payment Instructions</Label>
+              <Textarea
+                value={form.payment_instructions}
+                onChange={(e) => setForm({ ...form, payment_instructions: e.target.value })}
+                rows={3}
+                placeholder="e.g. Check payable to JLM Development Inc., mailed to..."
+              />
+            </div>
           </div>
 
           <DialogFooter>

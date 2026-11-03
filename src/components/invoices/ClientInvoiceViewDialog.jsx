@@ -4,10 +4,11 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Send, FileText, Loader2 } from "lucide-react";
+import { Send, FileText, Loader2, Download, Link2 } from "lucide-react";
 import StatusBadge from "@/components/StatusBadge";
 import { invoiceStatusConfig } from "@/lib/invoiceStatus";
 import { formatCurrency, formatDate } from "@/lib/format";
+import { downloadInvoicePdf } from "@/lib/invoicePdf";
 import { useToast } from "@/components/ui/use-toast";
 
 const REASON_MESSAGES = {
@@ -77,6 +78,13 @@ export default function ClientInvoiceViewDialog({ open, onOpenChange, invoice })
     });
     queryClient.invalidateQueries({ queryKey: ["clientInvoices", invoice.draw_cycle_id] });
     onOpenChange(false);
+  };
+
+  const clientLink = `${window.location.origin}/invoice/${invoice.id}`;
+
+  const copyLink = async () => {
+    await navigator.clipboard.writeText(clientLink);
+    toast({ title: "Client link copied", description: clientLink });
   };
 
   const items = Array.isArray(invoice.line_items) ? invoice.line_items : [];
@@ -173,6 +181,12 @@ export default function ClientInvoiceViewDialog({ open, onOpenChange, invoice })
             </Button>
             <Button size="sm" variant="outline" onClick={handleMarkPaid} disabled={invoice.status === "void"}>
               {invoice.status === "paid" ? "Mark Unpaid" : "Mark Paid"}
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => downloadInvoicePdf(invoice)}>
+              <Download className="w-4 h-4 mr-1.5" />PDF
+            </Button>
+            <Button size="sm" variant="outline" onClick={copyLink}>
+              <Link2 className="w-4 h-4 mr-1.5" />Client Link
             </Button>
             <Button size="sm" variant="ghost" onClick={() => onOpenChange(false)}>Close</Button>
           </div>

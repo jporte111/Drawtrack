@@ -11,6 +11,7 @@ import Login from '@/pages/Login';
 import Register from '@/pages/Register';
 import ForgotPassword from '@/pages/ForgotPassword';
 import ResetPassword from '@/pages/ResetPassword';
+import PublicInvoice from '@/pages/PublicInvoice';
 import Layout from '@/components/Layout';
 import ClientList from '@/pages/ClientList';
 import DrawList from '@/pages/DrawList';
@@ -75,6 +76,7 @@ function App() {
             <Route path="/register" element={<Register />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/invoice/:id" element={<PublicInvoice />} />
             <Route path="/*" element={<AuthenticatedApp />} />
           </Routes>
         </Router>

@@ -22,7 +22,7 @@ function rowsHtml(invoice) {
     .join("");
 }
 
-function buildHtml(invoice, client) {
+function buildHtml(invoice, client, links) {
   const items = Array.isArray(invoice.line_items) ? invoice.line_items : [];
   const total = invoice.total != null ? invoice.total : items.reduce((s, i) => s + (Number(i.amount) || 0), 0);
   const billTo = [invoice.bill_to_name || client?.name, invoice.bill_to_address || client?.address]
@@ -67,6 +67,18 @@ function buildHtml(invoice, client) {
       </tr>
       ${invoice.notes ? `<tr><td colspan="2" style="padding:0 24px 20px;font-size:13px;color:#475569;line-height:1.6;white-space:pre-line;">${esc(invoice.notes)}</td></tr>` : ""}
       <tr>
+        <td colspan="2" style="padding:0 24px 24px;">
+          <table cellpadding="0" cellspacing="0" border="0">
+            <tr>
+              <td style="padding-right:8px;">
+                <a href="${esc(links.invoiceUrl)}" style="display:inline-block;background:#0f172a;color:#ffffff;font-size:13px;font-weight:bold;text-decoration:none;padding:12px 18px;border-radius:6px;">View / Download Invoice</a>
+              </td>
+              ${links.payUrl ? `<td><a href="${esc(links.payUrl)}" style="display:inline-block;background:#16a34a;color:#ffffff;font-size:13px;font-weight:bold;text-decoration:none;padding:12px 18px;border-radius:6px;">Pay ${formatMoney(total)} Online</a></td>` : ""}
+            </tr>
+          </table>
+        </td>
+      </tr>
+      <tr>
         <td colspan="2" style="padding:20px 24px;border-top:1px solid #e5e7eb;font-size:12px;color:#64748b;">
           Thank you,<br/>${COMPANY}
         </td>
@@ -75,7 +87,7 @@ function buildHtml(invoice, client) {
   </div>`;
 }
 
-function buildText(invoice, client) {
+function buildText(invoice, client, links) {
   const items = Array.isArray(invoice.line_items) ? invoice.line_items : [];
   const total = invoice.total != null ? invoice.total : items.reduce((s, i) => s + (Number(i.amount) || 0), 0);
   const lines = [
@@ -91,6 +103,9 @@ function buildText(invoice, client) {
     "",
     `Total Due: ${formatMoney(total)}`,
     invoice.notes ? `\n${invoice.notes}` : "",
+    "",
+    `View / download invoice: ${links.invoiceUrl}`,
+    links.payUrl ? `Pay online: ${links.payUrl}` : "",
     "",
     `Thank you,\n${COMPANY}`,
   ];
@@ -134,9 +149,16 @@ export default async function (req) {
       return Response.json({ ok: false, reason: "outlook_not_connected", error: error.message });
     }
 
+    const appUrl =
+      req.headers.get("x-base44-app-url") ||
+      req.headers.get("origin") ||
+      "https://devious-draw-track-pro.base44.app";
+    const invoiceUrl = `${appUrl.replace(/\/$/, "")}/invoice/${invoice.id}`;
+    const payUrl = invoice.pay_url || "";
+
     const subject = `Invoice ${invoice.invoice_number}${invoice.project_name ? ` - ${invoice.project_name}` : ""}`;
-    const html = buildHtml(invoice, client);
-    const text = buildText(invoice, client);
+    const html = buildHtml(invoice, client, { invoiceUrl, payUrl });
+    const text = buildText(invoice, client, { invoiceUrl, payUrl });
 
     try {
       const message = {
@@ -159,7 +181,7 @@ export default async function (req) {
       sent_to: recipients.join(", "),
     });
 
-    return Response.json({ ok: true, recipients, subject, text, sent_at: sentAt });
+    return Response.json({ ok: true, recipients, subject, text, invoice_url: invoiceUrl, sent_at: sentAt });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
   }
