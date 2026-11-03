@@ -24,6 +24,14 @@
     },
     "notes": {
       "type": "string"
+    },
+    "track_lenders": {
+      "type": "boolean",
+      "default": true
+    },
+    "track_vouchers": {
+      "type": "boolean",
+      "default": true
     }
   },
   "required": [

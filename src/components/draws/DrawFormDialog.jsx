@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 const DRAW_STATUSES = ["in_progress", "submitted", "under_review", "funded", "closed"];
 
-export default function DrawFormDialog({ open, onOpenChange, draw, clientId }) {
+export default function DrawFormDialog({ open, onOpenChange, draw, clientId, showLenderFields = true }) {
   const isEdit = !!draw;
   const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
@@ -92,7 +92,7 @@ export default function DrawFormDialog({ open, onOpenChange, draw, clientId }) {
             <Label>Description</Label>
             <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={3} />
           </div>
-          <div className="border-t pt-4 space-y-4">
+          <div className={`border-t pt-4 space-y-4 ${showLenderFields ? "" : "hidden"}`}>
             <div className="space-y-1.5">
               <Label>Lender Current Payment Due ($)</Label>
               <Input type="number" value={form.lender_current_payment_due} onChange={(e) => setForm({ ...form, lender_current_payment_due: e.target.value })} placeholder="0" />

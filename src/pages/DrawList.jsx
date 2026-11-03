@@ -150,7 +150,7 @@ export default function DrawList() {
         )}
       </div>
 
-      <DrawFormDialog open={dialogOpen} onOpenChange={setDialogOpen} clientId={clientId} />
+      <DrawFormDialog open={dialogOpen} onOpenChange={setDialogOpen} clientId={clientId} showLenderFields={client?.track_lenders !== false} />
     </div>
   );
 }

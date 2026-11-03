@@ -47,6 +47,15 @@ export default function DrawDetail() {
     queryFn: () => base44.entities.DrawCycle.get(id),
   });
 
+  const { data: client } = useQuery({
+    queryKey: ["client", draw?.client_id],
+    queryFn: () => base44.entities.Client.get(draw.client_id),
+    enabled: !!draw?.client_id,
+  });
+
+  const showLenders = client?.track_lenders !== false;
+  const showVouchers = client?.track_vouchers !== false;
+
   if (isLoading) {
     return <div className="p-8 text-slate-400">Loading...</div>;
   }
@@ -99,17 +108,21 @@ export default function DrawDetail() {
         </div>
       </div>
 
-      <div className="bg-white border rounded-xl p-4 md:p-5 mb-4">
-        <LenderReconciliation drawId={id} />
-      </div>
+      {showLenders && (
+        <div className="bg-white border rounded-xl p-4 md:p-5 mb-4">
+          <LenderReconciliation drawId={id} />
+        </div>
+      )}
       <div className="bg-white border rounded-xl p-4 md:p-5 mb-4">
         <InvoiceLedger drawId={id} />
       </div>
-      <div className="bg-white border rounded-xl p-4 md:p-5">
-        <VoucherSection drawId={id} />
-      </div>
+      {showVouchers && (
+        <div className="bg-white border rounded-xl p-4 md:p-5">
+          <VoucherSection drawId={id} />
+        </div>
+      )}
 
-      <DrawFormDialog open={editOpen} onOpenChange={setEditOpen} draw={draw} />
+      <DrawFormDialog open={editOpen} onOpenChange={setEditOpen} draw={draw} showLenderFields={showLenders} />
     </div>
   );
 }

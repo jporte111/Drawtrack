@@ -7,8 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 
-const EMPTY = { name: "", project_name: "", address: "", status: "active", budget_url: "", notes: "" };
+const EMPTY = { name: "", project_name: "", address: "", status: "active", budget_url: "", notes: "", track_lenders: true, track_vouchers: true };
 
 export default function ClientFormDialog({ open, onOpenChange, client }) {
   const isEdit = !!client;
@@ -74,6 +75,16 @@ export default function ClientFormDialog({ open, onOpenChange, client }) {
           <div className="space-y-1.5">
             <Label>Notes</Label>
             <Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={2} />
+          </div>
+          <div className="border-t pt-4 space-y-3">
+            <label className="flex items-center justify-between gap-3 cursor-pointer">
+              <span className="text-sm text-slate-700">Lender tracking (reconciliation & AIA links)</span>
+              <Switch checked={form.track_lenders !== false} onCheckedChange={(v) => setForm({ ...form, track_lenders: v })} />
+            </label>
+            <label className="flex items-center justify-between gap-3 cursor-pointer">
+              <span className="text-sm text-slate-700">Voucher tracking</span>
+              <Switch checked={form.track_vouchers !== false} onCheckedChange={(v) => setForm({ ...form, track_vouchers: v })} />
+            </label>
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
