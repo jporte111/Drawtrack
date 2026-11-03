@@ -8,6 +8,7 @@ import DocStatusButton from "./DocStatusButton";
 import AddVendorDialog from "./AddVendorDialog";
 import AddInvoiceDialog from "./AddInvoiceDialog";
 import EditableAmount from "./EditableAmount";
+import EditableCategory from "./EditableCategory";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { useToast } from "@/components/ui/use-toast";
 
@@ -84,6 +85,7 @@ export default function InvoiceLedger({ drawId }) {
     const addLine = (catId, line) => {
       const amt = typeof line.amount === "number" && isFinite(line.amount) ? line.amount : null;
       line.validAmount = amt;
+      line.categoryId = catId && catMap.has(catId) ? catId : null;
       line.categoryName = (catId && catMap.get(catId)?.name) || "Uncategorized";
       if (amt != null) {
         grandTotal += amt;
@@ -157,6 +159,11 @@ export default function InvoiceLedger({ drawId }) {
 
   const { groupList, grandTotal, recipientTotals } = derived;
 
+  const categoryOptions = budgetCategories
+    .filter((c) => c.status !== "archived")
+    .slice()
+    .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0) || (a.name || "").localeCompare(b.name || ""));
+
   const updateRecipient = async (dvId, recipient) => {
     await base44.entities.DrawVendor.update(dvId, { payment_recipient: recipient });
     queryClient.invalidateQueries({ queryKey: ["drawVendors", drawId] });
@@ -165,6 +172,16 @@ export default function InvoiceLedger({ drawId }) {
   const updateDVAmount = async (dvId, amount) => {
     await base44.entities.DrawVendor.update(dvId, { amount });
     queryClient.invalidateQueries({ queryKey: ["drawVendors", drawId] });
+  };
+
+  const updateLineCategory = async (line, categoryId) => {
+    if (line.hasInvoice) {
+      await base44.entities.Document.update(line.invoice.id, { budget_category_id: categoryId || "" });
+      queryClient.invalidateQueries({ queryKey: ["documents"] });
+    } else {
+      await base44.entities.DrawVendor.update(line.drawVendorId, { budget_category_id: categoryId || "" });
+      queryClient.invalidateQueries({ queryKey: ["drawVendors", drawId] });
+    }
   };
 
   const updateInvoiceAmount = async (docId, amount) => {
@@ -347,7 +364,14 @@ export default function InvoiceLedger({ drawId }) {
                               </>
                             )}
                           </td>
-                          <td className="px-3 py-2.5 text-slate-600 align-top">{line.categoryName}</td>
+                          <td className="px-3 py-2.5 text-slate-600 align-top">
+                            <EditableCategory
+                              categoryId={line.categoryId}
+                              categoryName={line.categoryName}
+                              categories={categoryOptions}
+                              onSave={(catId) => updateLineCategory(line, catId)}
+                            />
+                          </td>
                           <td className="px-3 py-2.5 align-top">
                             {line.hasInvoice ? (
                               <a
