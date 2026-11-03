@@ -29,13 +29,19 @@ export default function DrawDetail() {
     setSubmitting(true);
     try {
       const res = await base44.functions.invoke("submitDraw", { draw_cycle_id: id });
+      const invoiceNumber = res.data?.clientInvoice?.invoice_number;
       toast({
         title: "Draw submitted",
-        description: res.data?.submittedName ? `Renamed to "${res.data.submittedName}"` : "Next draw created",
+        description: invoiceNumber
+          ? `Master invoice #${invoiceNumber} created`
+          : res.data?.submittedName
+            ? `Renamed to "${res.data.submittedName}"`
+            : "Next draw created",
       });
       queryClient.invalidateQueries({ queryKey: ["draw", id] });
       queryClient.invalidateQueries({ queryKey: ["draws"] });
       queryClient.invalidateQueries({ queryKey: ["drawCycle", id] });
+      queryClient.invalidateQueries({ queryKey: ["clientInvoices", id] });
     } catch (e) {
       toast({ variant: "destructive", title: "Submit failed", description: e.message });
     } finally {
@@ -93,7 +99,7 @@ export default function DrawDetail() {
                 <AlertDialogHeader>
                   <AlertDialogTitle>Submit this draw?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    This renames the draw by its date, marks it submitted, and creates the next "Next Draw" for this project.
+                    This renames the draw by its date, marks it submitted, creates the master client invoice from the draw ledger, and creates the next "Next Draw" for this project.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
