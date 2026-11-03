@@ -9,6 +9,7 @@ import AddVendorDialog from "./AddVendorDialog";
 import AddInvoiceDialog from "./AddInvoiceDialog";
 import EditableAmount from "./EditableAmount";
 import EditableCategory from "./EditableCategory";
+import CategoryTotals from "./CategoryTotals";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { useToast } from "@/components/ui/use-toast";
 
@@ -158,6 +159,14 @@ export default function InvoiceLedger({ drawId }) {
   }, [drawVendors, vendors, allDocs, budgetCategories, clientVendors]);
 
   const { groupList, grandTotal, recipientTotals } = derived;
+
+  const categoryTotals = groupList
+    .map((g) => ({
+      name: g.name,
+      count: g.lines.length,
+      total: g.lines.reduce((s, l) => s + (l.validAmount || 0), 0),
+    }))
+    .sort((a, b) => b.total - a.total);
 
   const categoryOptions = budgetCategories
     .filter((c) => c.status !== "archived")
@@ -461,6 +470,8 @@ export default function InvoiceLedger({ drawId }) {
             <SummaryCard label="JLM" value={recipientTotals.jlm} />
             <SummaryCard label="Grand Total" value={grandTotal} strong />
           </div>
+
+          <CategoryTotals rows={categoryTotals} grandTotal={grandTotal} />
         </>
       )}
 
