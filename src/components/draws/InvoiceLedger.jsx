@@ -219,6 +219,20 @@ export default function InvoiceLedger({ drawId }) {
     return created.id;
   };
 
+  const resolveCategoryByName = async (name) => {
+    const trimmed = (name || "").trim();
+    if (!trimmed) return null;
+    const existing = budgetCategories.find((c) => c.name && c.name.toLowerCase() === trimmed.toLowerCase());
+    if (existing) return existing.id;
+    return resolveCategory({ name: trimmed }, new Map());
+  };
+
+  const updateLineCategoryByName = async (line, name) => {
+    const catId = await resolveCategoryByName(name);
+    await updateLineCategory(line, catId);
+    queryClient.invalidateQueries({ queryKey: ["budgetCategories", drawCycle?.client_id] });
+  };
+
   const categorizeInvoice = async (inv) => {
     if (!inv.file_url) return null;
     const cats = budgetCategories.filter((c) => c.status !== "archived");
@@ -369,7 +383,7 @@ export default function InvoiceLedger({ drawId }) {
                               categoryId={line.categoryId}
                               categoryName={line.categoryName}
                               categories={categoryOptions}
-                              onSave={(catId) => updateLineCategory(line, catId)}
+                              onSave={(name) => updateLineCategoryByName(line, name)}
                             />
                           </td>
                           <td className="px-3 py-2.5 align-top">
