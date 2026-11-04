@@ -1,51 +1,36 @@
 import React, { useState } from "react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Pencil } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+const UNCATEGORIZED = "__none__";
+
+// Category editing is limited to the project's own Schedule of Values so the
+// ledger can never drift into categories the budget does not contain.
 export default function EditableCategory({ categoryId, categoryName, categories = [], onSave, className }) {
   const [editing, setEditing] = useState(false);
-  const [value, setValue] = useState(categoryId ? categoryName || "" : "");
-
-  const start = () => {
-    setValue(categoryId ? categoryName || "" : "");
-    setEditing(true);
-  };
-
-  const commit = () => {
-    setEditing(false);
-    const next = value.trim();
-    if (next === ((categoryId && categoryName) || "")) return;
-    onSave(next);
-  };
-
-  const cancel = () => {
-    setEditing(false);
-    setValue(categoryId ? categoryName || "" : "");
-  };
 
   if (editing) {
     return (
-      <>
-        <input
-          autoFocus
-          list="category-options"
-          value={value}
-          onChange={(e) => setValue(e.target.value)}
-          onClick={(e) => e.stopPropagation()}
-          onBlur={commit}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") commit();
-            if (e.key === "Escape") cancel();
-          }}
-          placeholder="Type a category"
-          className="h-7 w-[170px] rounded border border-input bg-transparent px-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-        />
-        <datalist id="category-options">
+      <Select
+        defaultOpen
+        value={categoryId || UNCATEGORIZED}
+        onValueChange={(value) => {
+          setEditing(false);
+          if ((value || UNCATEGORIZED) === (categoryId || UNCATEGORIZED)) return;
+          onSave(value === UNCATEGORIZED ? "" : value);
+        }}
+        open
+        onOpenChange={(o) => { if (!o) setEditing(false); }}
+      >
+        <SelectTrigger className="h-7 text-xs w-[190px]"><SelectValue /></SelectTrigger>
+        <SelectContent>
+          <SelectItem value={UNCATEGORIZED}>Uncategorized</SelectItem>
           {categories.map((c) => (
-            <option key={c.id} value={c.name} />
+            <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
           ))}
-        </datalist>
-      </>
+        </SelectContent>
+      </Select>
     );
   }
 
@@ -53,13 +38,14 @@ export default function EditableCategory({ categoryId, categoryName, categories 
     <button
       onClick={(e) => {
         e.stopPropagation();
-        start();
+        setEditing(true);
       }}
       className={cn(
         "inline-flex items-start gap-1 text-left rounded px-1.5 py-0.5 hover:underline hover:decoration-dotted",
-        className
+        !categoryId && "text-amber-700",
+        className,
       )}
-      title="Click to type a category"
+      title="Select a budget category for this project"
     >
       <span>{categoryId ? categoryName : "Uncategorized"}</span>
       <Pencil className="w-3 h-3 text-slate-400 shrink-0 mt-0.5" />

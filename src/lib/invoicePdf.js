@@ -74,7 +74,6 @@ export function downloadInvoicePdf(invoice) {
   const details = [
     ["Invoice #", invoice.invoice_number || "—"],
     ["Invoice Date", dateLabel(invoice.invoice_date)],
-    ["Due Date", dateLabel(invoice.due_date)],
     ...(invoice.project_name ? [["Project", invoice.project_name]] : []),
     ...(invoice.draw_name ? [["Draw", invoice.draw_name]] : []),
   ];

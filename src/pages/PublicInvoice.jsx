@@ -93,7 +93,7 @@ export default function PublicInvoice() {
             <div className="text-sm text-slate-600 sm:text-right space-y-1">
               <div><span className="text-slate-500">Invoice #:</span> {invoice.invoice_number}</div>
               <div><span className="text-slate-500">Date:</span> {formatDate(invoice.invoice_date)}</div>
-              <div><span className="text-slate-500">Due:</span> {formatDate(invoice.due_date)}</div>
+              <div><span className="text-slate-500">Date:</span> {formatDate(invoice.invoice_date)}</div>
               {invoice.project_name && <div><span className="text-slate-500">Project:</span> {invoice.project_name}</div>}
               {invoice.draw_name && <div><span className="text-slate-500">Draw:</span> {invoice.draw_name}</div>}
             </div>

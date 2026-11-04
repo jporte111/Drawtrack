@@ -22,7 +22,7 @@ function rowsHtml(invoice) {
     .join("");
 }
 
-function buildHtml(invoice, client, links) {
+function buildHtml(invoice, client, links, note) {
   const items = Array.isArray(invoice.line_items) ? invoice.line_items : [];
   const total = invoice.total != null ? invoice.total : items.reduce((s, i) => s + (Number(i.amount) || 0), 0);
   const billTo = [invoice.bill_to_name || client?.name, invoice.bill_to_address || client?.address]
@@ -40,9 +40,9 @@ function buildHtml(invoice, client, links) {
         </td>
         <td style="padding:24px;border-bottom:1px solid #e5e7eb;text-align:right;font-size:13px;color:#64748b;">
           ${invoice.invoice_date ? `<div>Date: ${formatDateValue(invoice.invoice_date)}</div>` : ""}
-          ${invoice.due_date ? `<div>Due: ${formatDateValue(invoice.due_date)}</div>` : ""}
         </td>
       </tr>
+      ${note ? `<tr><td colspan="2" style="padding:24px 24px 0;font-size:14px;line-height:1.6;color:#334155;white-space:pre-line;">${esc(note)}</td></tr>` : ""}
       <tr>
         <td colspan="2" style="padding:24px;">
           <div style="font-size:11px;font-weight:bold;letter-spacing:1px;text-transform:uppercase;color:#64748b;margin-bottom:6px;">Bill To</div>
@@ -87,14 +87,15 @@ function buildHtml(invoice, client, links) {
   </div>`;
 }
 
-function buildText(invoice, client, links) {
+function buildText(invoice, client, links, note) {
   const items = Array.isArray(invoice.line_items) ? invoice.line_items : [];
   const total = invoice.total != null ? invoice.total : items.reduce((s, i) => s + (Number(i.amount) || 0), 0);
   const lines = [
+    note || "",
+    "",
     `${COMPANY}`,
     `Invoice ${invoice.invoice_number}`,
     invoice.invoice_date ? `Date: ${formatDateValue(invoice.invoice_date)}` : "",
-    invoice.due_date ? `Due: ${formatDateValue(invoice.due_date)}` : "",
     "",
     `Bill To: ${invoice.bill_to_name || client?.name || ""}`,
     invoice.project_name ? `Project: ${invoice.project_name}` : "",
@@ -119,6 +120,10 @@ export default async function (req) {
     if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
     const body = await req.json().catch(() => ({}));
+    if (body.approved !== true) {
+      return Response.json({ ok: false, reason: "approval_required" }, { status: 400 });
+    }
+    const note = String(body.note || "").trim();
     const invoiceId = body.invoice_id;
     if (!invoiceId) return Response.json({ ok: false, reason: "missing_invoice" }, { status: 400 });
 
@@ -149,6 +154,14 @@ export default async function (req) {
       return Response.json({ ok: false, reason: "outlook_not_connected", error: error.message });
     }
 
+    let sender = "";
+    try {
+      const me = await graphRequest(accessToken, "/me?$select=mail,userPrincipalName");
+      sender = me?.mail || me?.userPrincipalName || "";
+    } catch (error) {
+      sender = "";
+    }
+
     const appUrl =
       req.headers.get("x-base44-app-url") ||
       req.headers.get("origin") ||
@@ -157,8 +170,8 @@ export default async function (req) {
     const payUrl = invoice.pay_url || "";
 
     const subject = `Invoice ${invoice.invoice_number}${invoice.project_name ? ` - ${invoice.project_name}` : ""}`;
-    const html = buildHtml(invoice, client, { invoiceUrl, payUrl });
-    const text = buildText(invoice, client, { invoiceUrl, payUrl });
+    const html = buildHtml(invoice, client, { invoiceUrl, payUrl }, note);
+    const text = buildText(invoice, client, { invoiceUrl, payUrl }, note);
 
     try {
       const message = {
@@ -179,9 +192,12 @@ export default async function (req) {
       status: "sent",
       sent_at: sentAt,
       sent_to: recipients.join(", "),
+      email_note: note,
+      approved_at: sentAt,
+      approved_by: user.email || user.full_name || "",
     });
 
-    return Response.json({ ok: true, recipients, subject, text, invoice_url: invoiceUrl, sent_at: sentAt });
+    return Response.json({ ok: true, recipients, subject, text, invoice_url: invoiceUrl, sent_at: sentAt, sender });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
   }

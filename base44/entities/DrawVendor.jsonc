@@ -8,6 +8,9 @@
     "vendor_id": {
       "type": "string"
     },
+    "vendor_name": {
+      "type": "string"
+    },
     "scope_of_work": {
       "type": "string"
     },
@@ -43,8 +46,7 @@
     }
   },
   "required": [
-    "draw_cycle_id",
-    "vendor_id"
+    "draw_cycle_id"
   ],
   "rls": {
     "create": null,

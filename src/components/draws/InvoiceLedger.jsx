@@ -1,12 +1,14 @@
-import React, { useMemo, useState, useRef } from "react";
+import React, { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, FileText, ExternalLink, Sparkles } from "lucide-react";
+import { Plus, FileText, ExternalLink, Sparkles, Download, AlertTriangle } from "lucide-react";
 import DocStatusButton from "./DocStatusButton";
-import AddVendorDialog from "./AddVendorDialog";
+import AddChargeDialog from "./AddChargeDialog";
 import AddInvoiceDialog from "./AddInvoiceDialog";
+import { categorizeExpense } from "@/lib/charges";
+import { exportLedgerCsv } from "@/lib/ledgerExport";
 import EditableAmount from "./EditableAmount";
 import EditableCategory from "./EditableCategory";
 import CategoryTotals from "./CategoryTotals";
@@ -23,7 +25,7 @@ const RECIPIENTS = [
 export default function InvoiceLedger({ drawId }) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const [addVendorOpen, setAddVendorOpen] = useState(false);
+  const [addChargeOpen, setAddChargeOpen] = useState(false);
   const [addInvoiceOpen, setAddInvoiceOpen] = useState(false);
   const [addInvoiceDVId, setAddInvoiceDVId] = useState(null);
   const [categorizing, setCategorizing] = useState(false);
@@ -53,6 +55,11 @@ export default function InvoiceLedger({ drawId }) {
   const { data: clientVendors = [] } = useQuery({
     queryKey: ["clientVendors", drawCycle?.client_id],
     queryFn: () => base44.entities.ClientVendor.filter({ client_id: drawCycle.client_id }),
+    enabled: !!drawCycle?.client_id,
+  });
+  const { data: client } = useQuery({
+    queryKey: ["client", drawCycle?.client_id],
+    queryFn: () => base44.entities.Client.get(drawCycle.client_id),
     enabled: !!drawCycle?.client_id,
   });
 
@@ -114,7 +121,7 @@ export default function InvoiceLedger({ drawId }) {
       const vendorTotal = invoices.reduce((s, inv) => s + (inv.amount || 0), 0);
       const base = {
         drawVendorId: dv.id,
-        vendorName: vendor?.name || "Unknown",
+        vendorName: vendor?.name || dv.vendor_name || "Unassigned",
         recipient,
         clientVendorId: cvId,
         vendorTotal,
@@ -183,9 +190,16 @@ export default function InvoiceLedger({ drawId }) {
     queryClient.invalidateQueries({ queryKey: ["drawVendors", drawId] });
   };
 
-  const updateLineCategory = async (line, categoryId) => {
+  const updateInvoiceAmount = async (docId, amount) => {
+    await base44.entities.Document.update(docId, { amount });
+    queryClient.invalidateQueries({ queryKey: ["documents"] });
+  };
+
+  const applyCategory = async (line, categoryId) => {
     if (line.hasInvoice) {
-      await base44.entities.Document.update(line.invoice.id, { budget_category_id: categoryId || "" });
+      const patch = { budget_category_id: categoryId || "" };
+      if (categoryId && line.invoice.review_status === "needs_review") patch.review_status = "approved";
+      await base44.entities.Document.update(line.invoice.id, patch);
       queryClient.invalidateQueries({ queryKey: ["documents"] });
     } else {
       await base44.entities.DrawVendor.update(line.drawVendorId, { budget_category_id: categoryId || "" });
@@ -193,80 +207,25 @@ export default function InvoiceLedger({ drawId }) {
     }
   };
 
-  const updateInvoiceAmount = async (docId, amount) => {
-    await base44.entities.Document.update(docId, { amount });
+  const flagForReview = async (line) => {
+    if (!line.hasInvoice) return;
+    await base44.entities.Document.update(line.invoice.id, { review_status: "needs_review" });
     queryClient.invalidateQueries({ queryKey: ["documents"] });
   };
 
-  const budgetRef = useRef(null);
-  const ensureBudget = async () => {
-    if (budgetRef.current) return budgetRef.current;
-    const budgets = await base44.entities.Budget.filter({ client_id: drawCycle.client_id });
-    if (budgets.length > 0) { budgetRef.current = budgets[0].id; return budgets[0].id; }
-    const b = await base44.entities.Budget.create({ client_id: drawCycle.client_id, name: "Draw Budget", budget_type: "internal", status: "active" });
-    budgetRef.current = b.id;
-    return b.id;
-  };
-
-  const resolveCategory = async (result, cache) => {
-    if (!result) return null;
-    if (result.id) return result.id;
-    if (!result.name) return null;
-    const key = result.name.toLowerCase();
-    if (cache.has(key)) return cache.get(key);
-    const existing = budgetCategories.find((c) => c.name && c.name.toLowerCase() === key);
-    if (existing) { cache.set(key, existing.id); return existing.id; }
-    const budgetId = await ensureBudget();
-    const created = await base44.entities.BudgetCategory.create({
-      budget_id: budgetId,
-      client_id: drawCycle.client_id,
-      name: result.name,
-      sort_order: 0,
-      status: "active",
-    });
-    cache.set(key, created.id);
-    return created.id;
-  };
-
-  const resolveCategoryByName = async (name) => {
-    const trimmed = (name || "").trim();
-    if (!trimmed) return null;
-    const existing = budgetCategories.find((c) => c.name && c.name.toLowerCase() === trimmed.toLowerCase());
-    if (existing) return existing.id;
-    return resolveCategory({ name: trimmed }, new Map());
-  };
-
-  const updateLineCategoryByName = async (line, name) => {
-    const catId = await resolveCategoryByName(name);
-    await updateLineCategory(line, catId);
-    queryClient.invalidateQueries({ queryKey: ["budgetCategories", drawCycle?.client_id] });
-  };
-
-  const categorizeInvoice = async (inv) => {
-    if (!inv.file_url) return null;
-    const cats = budgetCategories.filter((c) => c.status !== "archived");
-    const list = cats.map((c) => `${c.id}: ${c.name}`).join("\n") || "(none yet)";
-    const res = await base44.integrations.Core.InvokeLLM({
-      prompt: `You are categorizing a construction loan draw invoice into a budget category. Read the attached invoice and determine the single best category.\n\nExisting categories (id: name):\n${list}\n\nReturn JSON: "category_id" = the id of the best existing match (or null if none fit), and "category_name" = a short 1-3 word category label (e.g. "Waterproofing", "Electrical", "Plumbing"). If an existing category fits, prefer its id.`,
-      file_urls: [inv.file_url],
-      response_json_schema: { type: "object", properties: { category_id: { type: ["string", "null"] }, category_name: { type: ["string", "null"] } } },
-    });
-    return { id: res?.category_id || null, name: (res?.category_name || "").trim() || null };
-  };
-
   const suggestCategory = async (line) => {
-    if (!line.invoice?.file_url) return;
-    const cache = new Map();
     try {
-      const result = await categorizeInvoice(line.invoice);
-      const catId = await resolveCategory(result, cache);
-      if (catId) {
-        await base44.entities.Document.update(line.invoice.id, { budget_category_id: catId });
-        queryClient.invalidateQueries({ queryKey: ["documents"] });
-        queryClient.invalidateQueries({ queryKey: ["budgetCategories", drawCycle?.client_id] });
-        toast({ title: "Category assigned" });
+      const result = await categorizeExpense({
+        categories: categoryOptions,
+        fileUrl: line.invoice?.file_url,
+        description: line.invoice?.notes || line.scopeOfWork || line.vendorName,
+      });
+      if (result.categoryId) {
+        await applyCategory(line, result.categoryId);
+        toast({ title: "Category assigned", description: categoryOptions.find((c) => c.id === result.categoryId)?.name });
       } else {
-        toast({ variant: "destructive", title: "Could not determine category" });
+        await flagForReview(line);
+        toast({ variant: "destructive", title: "No budget category matched", description: "Flagged for manual review." });
       }
     } catch (e) {
       toast({ variant: "destructive", title: "Categorization failed", description: e.message });
@@ -276,32 +235,44 @@ export default function InvoiceLedger({ drawId }) {
   const autoCategorizeAll = async () => {
     const targets = [];
     groupList.forEach((g) => g.lines.forEach((line) => {
-      if (line.hasInvoice && line.invoice.file_url && !line.invoice.budget_category_id) targets.push(line);
+      if (!line.categoryId) targets.push(line);
     }));
     if (targets.length === 0) {
-      toast({ title: "Nothing to categorize", description: "All invoices already have a category." });
+      toast({ title: "Nothing to categorize", description: "Every line already sits in a budget category." });
+      return;
+    }
+    if (categoryOptions.length === 0) {
+      toast({ variant: "destructive", title: "No budget categories for this project", description: "Upload the project's Schedule of Values first." });
       return;
     }
     setCategorizing(true);
-    const cache = new Map();
     let assigned = 0;
+    let flagged = 0;
     try {
       for (let i = 0; i < targets.length; i++) {
         const line = targets[i];
         setCatProgress(`${i + 1}/${targets.length}: ${line.vendorName}`);
         try {
-          const result = await categorizeInvoice(line.invoice);
-          const catId = await resolveCategory(result, cache);
-          if (catId) {
-            await base44.entities.Document.update(line.invoice.id, { budget_category_id: catId });
+          const result = await categorizeExpense({
+            categories: categoryOptions,
+            fileUrl: line.invoice?.file_url,
+            description: line.invoice?.notes || line.scopeOfWork || line.vendorName,
+          });
+          if (result.categoryId) {
+            await applyCategory(line, result.categoryId);
             assigned++;
+          } else {
+            await flagForReview(line);
+            flagged++;
           }
         } catch (e) { /* skip individual */ }
       }
       queryClient.invalidateQueries({ queryKey: ["documents"] });
-      queryClient.invalidateQueries({ queryKey: ["budgetCategories", drawCycle?.client_id] });
-      queryClient.invalidateQueries({ queryKey: ["budgets", drawCycle?.client_id] });
-      toast({ title: "Categorization complete", description: `${assigned} of ${targets.length} invoice(s) categorized.` });
+      queryClient.invalidateQueries({ queryKey: ["drawVendors", drawId] });
+      toast({
+        title: "Categorization complete",
+        description: `${assigned} matched to budget categories, ${flagged} flagged for review.`,
+      });
     } finally {
       setCategorizing(false);
       setCatProgress("");
@@ -314,23 +285,58 @@ export default function InvoiceLedger({ drawId }) {
   };
 
   const lineCount = groupList.reduce((s, g) => s + g.lines.length, 0);
+  const missingCount = groupList.reduce(
+    (sum, g) => sum + g.lines.filter((l) => !l.invoice?.file_url).length,
+    0,
+  );
+  const ownerNames = [client?.name].filter(Boolean).join(", ");
 
   return (
     <div>
+      <div className="mb-4 rounded-lg border bg-slate-50/70 p-3">
+        <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
+            <div className="text-base font-semibold text-slate-900 truncate">
+              {drawCycle?.project_name || client?.project_name || "Project"}
+            </div>
+            {client?.address && <div className="text-sm text-slate-500 truncate">{client.address}</div>}
+          </div>
+          <div className="text-sm text-slate-600 sm:text-right shrink-0">
+            <div className="font-medium text-slate-900">{drawCycle?.name || "Draw"}</div>
+            <div>{ownerNames || "No client on file"}</div>
+          </div>
+        </div>
+      </div>
+
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
         <div>
           <h2 className="text-lg font-semibold text-slate-900">Draw Ledger</h2>
-          <p className="text-sm text-slate-500">Invoices and amounts grouped by budget category</p>
+          <p className="text-sm text-slate-500">Invoices and amounts grouped by the project's budget categories</p>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
           <Button size="sm" variant="outline" onClick={autoCategorizeAll} disabled={categorizing}>
             <Sparkles className="w-4 h-4 mr-1" />{categorizing ? (catProgress || "Categorizing...") : "Auto-Categorize"}
           </Button>
-          <Button size="sm" onClick={() => setAddVendorOpen(true)}>
-            <Plus className="w-4 h-4 mr-1" />Add Vendor
+          <Button size="sm" onClick={() => setAddChargeOpen(true)}>
+            <Plus className="w-4 h-4 mr-1" />Add Invoice
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => exportLedgerCsv({ groupList, draw: drawCycle, client, clientName: ownerNames })}
+            disabled={lineCount === 0}
+          >
+            <Download className="w-4 h-4 mr-1" />Export to Excel
           </Button>
         </div>
       </div>
+
+      {missingCount > 0 && (
+        <div className="mb-3 flex items-center gap-2 rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800">
+          <AlertTriangle className="w-4 h-4 shrink-0" />
+          {missingCount} line{missingCount === 1 ? "" : "s"} missing a supporting invoice.
+        </div>
+      )}
 
       {lineCount === 0 ? (
         <div className="text-center py-10 text-slate-400 border border-dashed rounded-lg">
@@ -392,7 +398,7 @@ export default function InvoiceLedger({ drawId }) {
                               categoryId={line.categoryId}
                               categoryName={line.categoryName}
                               categories={categoryOptions}
-                              onSave={(name) => updateLineCategoryByName(line, name)}
+                              onSave={(categoryId) => applyCategory(line, categoryId)}
                             />
                           </td>
                           <td className="px-3 py-2.5 align-top">
@@ -475,7 +481,13 @@ export default function InvoiceLedger({ drawId }) {
         </>
       )}
 
-      <AddVendorDialog open={addVendorOpen} onOpenChange={setAddVendorOpen} drawId={drawId} clientId={drawCycle?.client_id} />
+      <AddChargeDialog
+        open={addChargeOpen}
+        onOpenChange={setAddChargeOpen}
+        drawId={drawId}
+        clientId={drawCycle?.client_id}
+        categories={categoryOptions}
+      />
       <AddInvoiceDialog open={addInvoiceOpen} onOpenChange={setAddInvoiceOpen} drawVendorId={addInvoiceDVId} drawId={drawId} />
     </div>
   );

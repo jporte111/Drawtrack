@@ -133,7 +133,6 @@ async function createDrawInvoice(base44: any, draw: any, drawName: string) {
     draw_cycle_id: draw.id,
     invoice_number: nextNumber,
     invoice_date: today,
-    due_date: today,
     status: "draft",
     bill_to_name: client?.name || "",
     bill_to_email: "",

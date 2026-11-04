@@ -92,7 +92,11 @@ export default function VendorChecklist({ drawId }) {
 
   const invoiceTotalByDV = drawVendors.reduce((acc, dv) => {
     const invoices = docsByDV[dv.id]?.invoices || [];
-    acc[dv.id] = invoices.reduce((sum, inv) => sum + (inv.amount || 0), 0);
+    // Only sync from invoices when they exist — manual expenses without a
+    // supporting invoice keep the amount that was entered.
+    if (invoices.length > 0) {
+      acc[dv.id] = invoices.reduce((sum, inv) => sum + (inv.amount || 0), 0);
+    }
     return acc;
   }, {});
 
@@ -225,12 +229,12 @@ export default function VendorChecklist({ drawId }) {
                         <td className="px-2 py-2.5 text-right font-medium">
                           {docs.invoices && docs.invoices.length === 1 ? (
                             <EditableAmount
-                              amount={invoiceTotalByDV[dv.id] || 0}
+                              amount={invoiceTotalByDV[dv.id] ?? dv.amount ?? 0}
                               onSave={(val) => handleInvoiceAmountChange(docs.invoices[0], val)}
                               className="justify-end"
                             />
                           ) : (
-                            <span>{formatCurrency(invoiceTotalByDV[dv.id] || 0)}</span>
+                            <span>{formatCurrency(invoiceTotalByDV[dv.id] ?? dv.amount ?? 0)}</span>
                           )}
                         </td>
                         <td className="px-2 py-2"><InvoiceStatusCell invoices={docs.invoices || []} drawId={drawId} /></td>
@@ -249,7 +253,7 @@ export default function VendorChecklist({ drawId }) {
                             <Button size="icon" variant="ghost" className="h-7 w-7 text-slate-400 hover:text-slate-700" onClick={() => openAddInvoice(dv.id)} title="Add invoices">
                               <Plus className="w-3.5 h-3.5" />
                             </Button>
-                            <Button size="icon" variant="ghost" className="h-7 w-7 text-slate-400 hover:text-slate-700" onClick={() => openGenerateDialog(vendor?.name || "Unknown", invoiceTotalByDV[dv.id] || 0)} title="Generate lien release forms">
+                            <Button size="icon" variant="ghost" className="h-7 w-7 text-slate-400 hover:text-slate-700" onClick={() => openGenerateDialog(vendor?.name || "Unknown", invoiceTotalByDV[dv.id] ?? dv.amount ?? 0)} title="Generate lien release forms">
                               <FileText className="w-3.5 h-3.5" />
                             </Button>
                             <Button size="icon" variant="ghost" className="h-7 w-7 text-slate-400 hover:text-red-600" onClick={() => handleRemoveVendor(dv.id)}>
@@ -310,11 +314,11 @@ export default function VendorChecklist({ drawId }) {
                     <div className="font-medium text-sm shrink-0">
                       {docs.invoices && docs.invoices.length === 1 ? (
                         <EditableAmount
-                          amount={invoiceTotalByDV[dv.id] || 0}
+                          amount={invoiceTotalByDV[dv.id] ?? dv.amount ?? 0}
                           onSave={(val) => handleInvoiceAmountChange(docs.invoices[0], val)}
                         />
                       ) : (
-                        <span>{formatCurrency(invoiceTotalByDV[dv.id] || 0)}</span>
+                        <span>{formatCurrency(invoiceTotalByDV[dv.id] ?? dv.amount ?? 0)}</span>
                       )}
                     </div>
                   </div>
@@ -343,7 +347,7 @@ export default function VendorChecklist({ drawId }) {
                       <Button size="icon" variant="ghost" className="h-8 w-8 text-slate-400 hover:text-slate-700" onClick={() => openAddInvoice(dv.id)} title="Add invoices">
                         <Plus className="w-4 h-4" />
                       </Button>
-                      <Button size="icon" variant="ghost" className="h-8 w-8 text-slate-400 hover:text-slate-700" onClick={() => openGenerateDialog(vendor?.name || "Unknown", invoiceTotalByDV[dv.id] || 0)} title="Generate lien release forms">
+                      <Button size="icon" variant="ghost" className="h-8 w-8 text-slate-400 hover:text-slate-700" onClick={() => openGenerateDialog(vendor?.name || "Unknown", invoiceTotalByDV[dv.id] ?? dv.amount ?? 0)} title="Generate lien release forms">
                         <FileText className="w-4 h-4" />
                       </Button>
                       <Button size="icon" variant="ghost" className="h-8 w-8 text-slate-400 hover:text-red-600" onClick={() => handleRemoveVendor(dv.id)}>

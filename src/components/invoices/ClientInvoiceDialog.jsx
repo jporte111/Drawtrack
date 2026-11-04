@@ -44,15 +44,22 @@ function buildLines({ drawVendors, vendors, documents, categories }) {
   return lines;
 }
 
+function nextInvoiceNumber(invoices) {
+  const numbers = (invoices || [])
+    .map((inv) => parseInt(String(inv.invoice_number || "").replace(/[^0-9]/g, ""), 10))
+    .filter((n) => Number.isFinite(n));
+  return String((numbers.length ? Math.max(...numbers) : 1000) + 1);
+}
+
 export default function ClientInvoiceDialog({ open, onOpenChange, drawId, invoice }) {
   const isEdit = !!invoice;
   const queryClient = useQueryClient();
   const initialized = useRef(false);
   const [saving, setSaving] = useState(false);
+  const [numbering, setNumbering] = useState("auto");
   const [form, setForm] = useState({
     invoice_number: "",
     invoice_date: "",
-    due_date: "",
     bill_to_name: "",
     bill_to_email: "",
     bill_to_address: "",
@@ -95,8 +102,15 @@ export default function ClientInvoiceDialog({ open, onOpenChange, drawId, invoic
   const { data: clientInvoices = [] } = useQuery({
     queryKey: ["clientInvoices", "client", draw?.client_id],
     queryFn: () => base44.entities.ClientInvoice.filter({ client_id: draw.client_id }),
-    enabled: open && !!draw?.client_id && !isEdit,
+    enabled: open && !!draw?.client_id,
   });
+  const { data: contacts = [] } = useQuery({
+    queryKey: ["clientContacts", draw?.client_id],
+    queryFn: () => base44.entities.ClientContact.filter({ client_id: draw.client_id, active: true }),
+    enabled: open && !!draw?.client_id,
+  });
+
+  const billingEmail = (contacts.find((c) => c.email && c.receives_releases !== false) || {}).email || "";
 
   useEffect(() => {
     if (!open) {
@@ -106,10 +120,10 @@ export default function ClientInvoiceDialog({ open, onOpenChange, drawId, invoic
     if (initialized.current) return;
     if (isEdit) {
       initialized.current = true;
+      setNumbering("manual");
       setForm({
         invoice_number: invoice.invoice_number || "",
         invoice_date: invoice.invoice_date || "",
-        due_date: invoice.due_date || "",
         bill_to_name: invoice.bill_to_name || "",
         bill_to_email: invoice.bill_to_email || "",
         bill_to_address: invoice.bill_to_address || "",
@@ -130,20 +144,19 @@ export default function ClientInvoiceDialog({ open, onOpenChange, drawId, invoic
     initialized.current = true;
 
     const lines = buildLines({ drawVendors, vendors, documents, categories });
-    const sequence = clientInvoices.length + 1;
+    setNumbering("auto");
     setForm({
-      invoice_number: `INV-${new Date().getFullYear()}-${String(sequence).padStart(3, "0")}`,
+      invoice_number: nextInvoiceNumber(clientInvoices),
       invoice_date: new Date().toISOString().slice(0, 10),
-      due_date: "",
       bill_to_name: client.name || "",
-      bill_to_email: "",
+      bill_to_email: billingEmail,
       bill_to_address: client.address || "",
       notes: "",
       pay_url: "",
       payment_instructions: "",
       line_items: lines.length > 0 ? lines : [{ description: "", amount: "" }],
     });
-  }, [open, isEdit, invoice, draw, client, drawVendors, vendors, documents, categories, clientInvoices]);
+  }, [open, isEdit, invoice, draw, client, drawVendors, vendors, documents, categories, clientInvoices, billingEmail]);
 
   const total = form.line_items.reduce((sum, li) => sum + (Number(li.amount) || 0), 0);
 
@@ -173,7 +186,6 @@ export default function ClientInvoiceDialog({ open, onOpenChange, drawId, invoic
         project_name: draw?.project_name || invoice?.project_name || "",
         invoice_number: form.invoice_number.trim(),
         invoice_date: form.invoice_date || "",
-        due_date: form.due_date || "",
         bill_to_name: form.bill_to_name,
         bill_to_email: form.bill_to_email,
         bill_to_address: form.bill_to_address,
@@ -206,18 +218,40 @@ export default function ClientInvoiceDialog({ open, onOpenChange, drawId, invoic
           <DialogTitle>{isEdit ? "Edit Client Invoice" : "New Client Invoice"}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label>Invoice #</Label>
-              <Input value={form.invoice_number} onChange={(e) => setForm({ ...form, invoice_number: e.target.value })} required />
+              <div className="flex items-center justify-between">
+                <Label>Invoice #</Label>
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNumbering("auto");
+                      setForm((prev) => ({ ...prev, invoice_number: nextInvoiceNumber(clientInvoices) }));
+                    }}
+                    className={`h-6 rounded px-2 text-xs font-medium ${numbering === "auto" ? "bg-slate-900 text-white" : "border text-slate-600"}`}
+                  >
+                    Automatic
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setNumbering("manual")}
+                    className={`h-6 rounded px-2 text-xs font-medium ${numbering === "manual" ? "bg-slate-900 text-white" : "border text-slate-600"}`}
+                  >
+                    Manual
+                  </button>
+                </div>
+              </div>
+              <Input
+                value={form.invoice_number}
+                onChange={(e) => setForm({ ...form, invoice_number: e.target.value })}
+                disabled={numbering === "auto"}
+                required
+              />
             </div>
             <div className="space-y-1.5">
               <Label>Invoice Date</Label>
               <Input type="date" value={form.invoice_date} onChange={(e) => setForm({ ...form, invoice_date: e.target.value })} />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Due Date</Label>
-              <Input type="date" value={form.due_date} onChange={(e) => setForm({ ...form, due_date: e.target.value })} />
             </div>
           </div>
 

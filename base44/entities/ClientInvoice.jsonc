@@ -15,10 +15,6 @@
       "type": "string",
       "format": "date"
     },
-    "due_date": {
-      "type": "string",
-      "format": "date"
-    },
     "status": {
       "type": "string",
       "enum": [
@@ -75,6 +71,15 @@
       "type": "string"
     },
     "payment_instructions": {
+      "type": "string"
+    },
+    "email_note": {
+      "type": "string"
+    },
+    "approved_at": {
+      "type": "string"
+    },
+    "approved_by": {
       "type": "string"
     },
     "sent_at": {
