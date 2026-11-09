@@ -17,7 +17,7 @@ const UNCATEGORIZED = "__none__";
 export default function AddChargeDialog({ open, onOpenChange, drawId, clientId, categories = [] }) {
   const queryClient = useQueryClient();
   const inputRef = useRef(null);
-  const [mode, setMode] = useState("upload");
+  const [mode, setMode] = useState("manual");
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [file, setFile] = useState(null);
@@ -41,7 +41,7 @@ export default function AddChargeDialog({ open, onOpenChange, drawId, clientId, 
 
   useEffect(() => {
     if (!open) return;
-    setMode("upload");
+    setMode("manual");
     setFile(null);
     setExtracted(false);
     setForm({
@@ -159,10 +159,16 @@ export default function AddChargeDialog({ open, onOpenChange, drawId, clientId, 
         <form onSubmit={handleSubmit} className="space-y-4">
           <Tabs value={mode} onValueChange={setMode}>
             <TabsList className="grid grid-cols-2 w-full">
-              <TabsTrigger value="upload">Upload invoice</TabsTrigger>
               <TabsTrigger value="manual">Enter manually</TabsTrigger>
+              <TabsTrigger value="upload">Upload invoice</TabsTrigger>
             </TabsList>
           </Tabs>
+
+          {mode === "manual" && (
+            <p className="text-xs text-slate-500">
+              No invoice file needed — pick the vendor, enter the amount, and this line is added to the draw.
+            </p>
+          )}
 
           {mode === "upload" && (
             <div className="space-y-2">

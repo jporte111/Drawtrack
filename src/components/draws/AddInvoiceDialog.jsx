@@ -16,7 +16,8 @@ export default function AddInvoiceDialog({ open, onOpenChange, drawVendorId, dra
 
   useEffect(() => {
     if (open) {
-      setInvoices([]);
+      // Start with one blank line so an invoice can be typed in without a file.
+      setInvoices([{ file_url: "", filename: "", amount: "", uploading: false, error: "", doc_type: "invoice" }]);
     }
   }, [open]);
 
@@ -80,6 +81,7 @@ export default function AddInvoiceDialog({ open, onOpenChange, drawVendorId, dra
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label>Invoices</Label>
+            <p className="text-xs text-slate-500">Upload the file, or type the amount if there is no invoice yet.</p>
             {invoices.map((inv, index) => (
               <InvoiceItem
                 key={index}
