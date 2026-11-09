@@ -7,7 +7,6 @@ import { Plus, FileText, ExternalLink, Sparkles, Download, AlertTriangle } from 
 import DocStatusButton from "./DocStatusButton";
 import AddChargeDialog from "./AddChargeDialog";
 import AddInvoiceDialog from "./AddInvoiceDialog";
-import InvoiceDropZone from "./InvoiceDropZone";
 import { categorizeExpense } from "@/lib/charges";
 import { exportLedgerCsv } from "@/lib/ledgerExport";
 import EditableAmount from "./EditableAmount";
@@ -33,7 +32,6 @@ export default function InvoiceLedger({ drawId }) {
   const [addChargeOpen, setAddChargeOpen] = useState(false);
   const [addInvoiceOpen, setAddInvoiceOpen] = useState(false);
   const [addInvoiceDVId, setAddInvoiceDVId] = useState(null);
-  const [pendingFiles, setPendingFiles] = useState([]);
   const [categorizing, setCategorizing] = useState(false);
   const [catProgress, setCatProgress] = useState("");
 
@@ -350,14 +348,7 @@ export default function InvoiceLedger({ drawId }) {
   };
 
   const openAddInvoice = (dvId) => {
-    setPendingFiles([]);
     setAddInvoiceDVId(dvId);
-    setAddInvoiceOpen(true);
-  };
-
-  const openDropInvoices = (files) => {
-    setAddInvoiceDVId(null);
-    setPendingFiles(files || []);
     setAddInvoiceOpen(true);
   };
 
@@ -383,14 +374,6 @@ export default function InvoiceLedger({ drawId }) {
             <div>{ownerNames || "No client on file"}</div>
           </div>
         </div>
-      </div>
-
-      <div className="mb-4">
-        <InvoiceDropZone onFiles={openDropInvoices} busy={false} />
-        <p className="mt-1 text-xs text-slate-500">
-          Drop one or several invoices here. Each file is read automatically and grouped by vendor so you can review it
-          before saving.
-        </p>
       </div>
 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
@@ -585,13 +568,9 @@ export default function InvoiceLedger({ drawId }) {
       />
       <AddInvoiceDialog
         open={addInvoiceOpen}
-        onOpenChange={(next) => {
-          setAddInvoiceOpen(next);
-          if (!next) setPendingFiles([]);
-        }}
+        onOpenChange={setAddInvoiceOpen}
         drawVendorId={addInvoiceDVId}
         drawId={drawId}
-        initialFiles={pendingFiles}
         retentionRate={retentionEnabled ? client?.retention_rate ?? DEFAULT_RETENTION_RATE : null}
       />
     </div>

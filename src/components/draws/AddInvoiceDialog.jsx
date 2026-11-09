@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
@@ -30,14 +30,7 @@ const blankItem = (over = {}) => ({
   ...over,
 });
 
-export default function AddInvoiceDialog({
-  open,
-  onOpenChange,
-  drawVendorId,
-  drawId,
-  retentionRate,
-  initialFiles = [],
-}) {
+export default function AddInvoiceDialog({ open, onOpenChange, drawVendorId, drawId, retentionRate }) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
@@ -88,15 +81,8 @@ export default function AddInvoiceDialog({
     return { vendor_id: dv.vendor_id || null, vendor_name: name, needsReview: false };
   }, [drawVendorId, drawVendors, vendors]);
 
-  const initialFilesRef = useRef(initialFiles);
-  initialFilesRef.current = initialFiles;
   useEffect(() => {
-    if (!open) {
-      setItems([]);
-      return;
-    }
-    setItems([]);
-    if (initialFilesRef.current?.length) handleFiles(initialFilesRef.current);
+    if (open) setItems([]);
   }, [open]);
 
   const matchVendor = (rawName) => {
