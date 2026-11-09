@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 
-const EMPTY = { name: "", project_name: "", address: "", status: "active", budget_url: "", notes: "", track_lenders: true, track_vouchers: true, retention_enabled: false, retention_rate: 10 };
+const EMPTY = { name: "", project_name: "", address: "", status: "active", budget_url: "", notes: "", track_lenders: true, track_vouchers: true, retention_enabled: false, retention_rate: 5 };
 
 export default function ClientFormDialog({ open, onOpenChange, client }) {
   const isEdit = !!client;
@@ -97,7 +97,7 @@ export default function ClientFormDialog({ open, onOpenChange, client }) {
                     type="number"
                     step="0.1"
                     min="0"
-                    value={form.retention_rate ?? 10}
+                    value={form.retention_rate ?? 5}
                     onChange={(e) => setForm({ ...form, retention_rate: e.target.value === "" ? "" : Number(e.target.value) })}
                     className="h-8 w-20 text-right"
                   />

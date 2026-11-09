@@ -1,5 +1,5 @@
 import { base44 } from "@/api/base44Client";
-import { retentionPatch } from "@/lib/retention";
+import { DEFAULT_RETENTION_RATE, retentionPatch } from "@/lib/retention";
 
 // Suggest a category from the project's own Schedule of Values only.
 // Returns { categoryId, matched } — never invents a category.
@@ -95,7 +95,7 @@ export async function createCharge({
 
   const client = clientId ? await base44.entities.Client.get(clientId) : null;
   const retention = client?.retention_enabled
-    ? retentionPatch(amount, client.retention_rate ?? 10)
+    ? retentionPatch(amount, client.retention_rate ?? DEFAULT_RETENTION_RATE)
     : {};
 
   const today = new Date().toISOString().slice(0, 10);

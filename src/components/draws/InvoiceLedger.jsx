@@ -14,7 +14,7 @@ import EditableCategory from "./EditableCategory";
 import CategoryTotals from "./CategoryTotals";
 import RetentionCell from "./RetentionCell";
 import VendorRetentionTable from "./VendorRetentionTable";
-import { invoiceRetention, retentionPatch } from "@/lib/retention";
+import { DEFAULT_RETENTION_RATE, invoiceRetention, retentionPatch } from "@/lib/retention";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { useToast } from "@/components/ui/use-toast";
 
@@ -466,6 +466,7 @@ export default function InvoiceLedger({ drawId }) {
                             {retentionEnabled && line.hasInvoice && (
                               <RetentionCell
                                 invoice={line.invoice}
+                                defaultRate={client?.retention_rate ?? DEFAULT_RETENTION_RATE}
                                 onSave={(patch) => saveRetention(line.invoice.id, patch)}
                               />
                             )}
@@ -525,7 +526,7 @@ export default function InvoiceLedger({ drawId }) {
         onOpenChange={setAddInvoiceOpen}
         drawVendorId={addInvoiceDVId}
         drawId={drawId}
-        retentionRate={retentionEnabled ? client?.retention_rate ?? 10 : null}
+        retentionRate={retentionEnabled ? client?.retention_rate ?? DEFAULT_RETENTION_RATE : null}
       />
     </div>
   );

@@ -1,3 +1,5 @@
+export const DEFAULT_RETENTION_RATE = 5;
+
 const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
 
 // Gross invoiced, retention withheld and net paid for one invoice document.
