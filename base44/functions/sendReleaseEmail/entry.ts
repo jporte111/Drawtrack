@@ -64,6 +64,13 @@ export default async function(req) {
     const projectAddress = client?.address || "";
     const invoiceNumber = invoice?.invoice_number || doc.invoice_number || "";
     const invoiceAmount = invoice?.amount != null ? invoice.amount : doc.amount;
+    const retentionAmount = invoice?.retention_amount != null ? invoice.retention_amount : 0;
+    const netPaid =
+      invoice?.net_paid_amount != null
+        ? invoice.net_paid_amount
+        : invoiceAmount != null
+          ? invoiceAmount - retentionAmount
+          : null;
     const releaseKind = doc.document_type === "conditional_lien_release" ? "Conditional" : "Unconditional";
 
     // Recipients
@@ -92,9 +99,15 @@ export default async function(req) {
       "",
       `Attached is the ${releaseKind.toLowerCase()} waiver and release for ${vendorName}` +
         (invoiceNumber ? `, invoice ${invoiceNumber}` : "") +
-        (invoiceAmount != null ? ` in the amount of ${formatMoney(invoiceAmount)}` : "") +
+        (netPaid != null ? ` in the amount of ${formatMoney(netPaid)}` : "") +
         (drawCycleName ? `, for the draw cycle ${drawCycleName}.` : "."),
     ];
+    if (retentionAmount > 0) {
+      bodyLines.push(
+        "",
+        `Invoice total: ${formatMoney(invoiceAmount)}. Retention withheld: ${formatMoney(retentionAmount)}. Net amount paid: ${formatMoney(netPaid)}.`,
+      );
+    }
     if (clientName) bodyLines.push("", `Project: ${clientName}${drawCycle?.project_name ? ` - ${drawCycle.project_name}` : ""}`);
     if (projectAddress) bodyLines.push(`Project address: ${projectAddress}`);
     bodyLines.push(
