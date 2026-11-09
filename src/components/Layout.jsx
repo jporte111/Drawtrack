@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { Outlet, Link, useLocation } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
-import { HardHat, ClipboardList, Users, Menu, X, ChevronDown, ChevronRight, FolderOpen, Building2, DollarSign, Mail } from "lucide-react";
+import { HardHat, ClipboardList, Users, Menu, X, ChevronDown, ChevronRight, FolderOpen, Building2, DollarSign, Mail, Percent } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default function Layout() {
@@ -134,6 +134,19 @@ export default function Layout() {
                         <DollarSign className="w-3.5 h-3.5" />
                         Budget
                       </Link>
+                      {client.retention_enabled && (
+                        <Link
+                          to={`/clients/${client.id}/retention`}
+                          onClick={() => setSidebarOpen(false)}
+                          className={cn(
+                            "flex items-center gap-2.5 px-3 py-1.5 rounded-md text-sm transition-colors",
+                            location.pathname === `/clients/${client.id}/retention` ? "bg-slate-800 text-white" : "text-slate-400 hover:text-white hover:bg-slate-800/50"
+                          )}
+                        >
+                          <Percent className="w-3.5 h-3.5" />
+                          Retention
+                        </Link>
+                      )}
                       <Link
                         to={`/clients/${client.id}/contacts`}
                         onClick={() => setSidebarOpen(false)}

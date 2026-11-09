@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 
-const EMPTY = { name: "", project_name: "", address: "", status: "active", budget_url: "", notes: "", track_lenders: true, track_vouchers: true };
+const EMPTY = { name: "", project_name: "", address: "", status: "active", budget_url: "", notes: "", track_lenders: true, track_vouchers: true, retention_enabled: false, retention_rate: 10 };
 
 export default function ClientFormDialog({ open, onOpenChange, client }) {
   const isEdit = !!client;
@@ -85,6 +85,26 @@ export default function ClientFormDialog({ open, onOpenChange, client }) {
               <span className="text-sm text-slate-700">Voucher tracking</span>
               <Switch checked={form.track_vouchers !== false} onCheckedChange={(v) => setForm({ ...form, track_vouchers: v })} />
             </label>
+            <label className="flex items-center justify-between gap-3 cursor-pointer">
+              <span className="text-sm text-slate-700">Retention withheld on vendor invoices</span>
+              <Switch checked={!!form.retention_enabled} onCheckedChange={(v) => setForm({ ...form, retention_enabled: v })} />
+            </label>
+            {form.retention_enabled && (
+              <div className="flex items-center justify-between gap-3 pl-0">
+                <span className="text-sm text-slate-700">Default retention rate</span>
+                <div className="flex items-center gap-1.5">
+                  <Input
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    value={form.retention_rate ?? 10}
+                    onChange={(e) => setForm({ ...form, retention_rate: e.target.value === "" ? "" : Number(e.target.value) })}
+                    className="h-8 w-20 text-right"
+                  />
+                  <span className="text-sm text-slate-500">%</span>
+                </div>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>

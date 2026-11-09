@@ -7,8 +7,9 @@ import { Label } from "@/components/ui/label";
 import { Plus } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
 import InvoiceItem from "./InvoiceItem";
+import { retentionPatch } from "@/lib/retention";
 
-export default function AddInvoiceDialog({ open, onOpenChange, drawVendorId, drawId }) {
+export default function AddInvoiceDialog({ open, onOpenChange, drawVendorId, drawId, retentionRate }) {
   const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
   const [invoices, setInvoices] = useState([]);
@@ -41,15 +42,17 @@ export default function AddInvoiceDialog({ open, onOpenChange, drawVendorId, dra
       const invoiceInputs = invoices.filter((inv) => inv.file_url || inv.amount);
       const createdInvoices = [];
       for (const inv of invoiceInputs) {
+        const amount = inv.amount ? Number(inv.amount) : null;
         createdInvoices.push(
           await base44.entities.Document.create({
             draw_vendor_id: drawVendorId,
             document_type: inv.doc_type || "invoice",
             status: "complete",
             file_url: inv.file_url || null,
-            amount: inv.amount ? Number(inv.amount) : null,
+            amount,
             invoice_number: inv.invoice_number || null,
             received_date: today,
+            ...(retentionRate != null ? retentionPatch(amount, retentionRate) : {}),
           })
         );
       }

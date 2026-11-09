@@ -12,6 +12,9 @@ import { exportLedgerCsv } from "@/lib/ledgerExport";
 import EditableAmount from "./EditableAmount";
 import EditableCategory from "./EditableCategory";
 import CategoryTotals from "./CategoryTotals";
+import RetentionCell from "./RetentionCell";
+import VendorRetentionTable from "./VendorRetentionTable";
+import { invoiceRetention, retentionPatch } from "@/lib/retention";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { useToast } from "@/components/ui/use-toast";
 
@@ -88,6 +91,7 @@ export default function InvoiceLedger({ drawId }) {
     const groups = {};
     const uncategorized = { name: "Uncategorized", sortOrder: 9999, lines: [] };
     const recipientTotals = { vendor: 0, jlm: 0, mike: 0, jose: 0 };
+    const vendorRetention = [];
     let grandTotal = 0;
 
     const addLine = (catId, line) => {
@@ -119,12 +123,23 @@ export default function InvoiceLedger({ drawId }) {
         .slice()
         .sort((a, b) => (a.invoice_date || "").localeCompare(b.invoice_date || ""));
       const vendorTotal = invoices.reduce((s, inv) => s + (inv.amount || 0), 0);
+      const retention = invoices.length
+        ? invoices.reduce(
+            (acc, inv) => {
+              const r = invoiceRetention(inv);
+              return { gross: acc.gross + r.gross, retained: acc.retained + r.retained, net: acc.net + r.net };
+            },
+            { gross: 0, retained: 0, net: 0 },
+          )
+        : { gross: dv.amount || 0, retained: 0, net: dv.amount || 0 };
+      vendorRetention.push({ id: dv.id, name: vendor?.name || dv.vendor_name || "Unassigned", ...retention });
       const base = {
         drawVendorId: dv.id,
         vendorName: vendor?.name || dv.vendor_name || "Unassigned",
         recipient,
         clientVendorId: cvId,
         vendorTotal,
+        vendorRetention: retention,
         scopeOfWork: dv.scope_of_work || "",
         notes: dv.notes || "",
       };
@@ -162,10 +177,11 @@ export default function InvoiceLedger({ drawId }) {
     const groupList = Object.values(groups).sort((a, b) => a.sortOrder - b.sortOrder);
     if (uncategorized.lines.length > 0) groupList.push(uncategorized);
 
-    return { groupList, grandTotal, recipientTotals };
+    return { groupList, grandTotal, recipientTotals, vendorRetention };
   }, [drawVendors, vendors, allDocs, budgetCategories, clientVendors]);
 
-  const { groupList, grandTotal, recipientTotals } = derived;
+  const { groupList, grandTotal, recipientTotals, vendorRetention } = derived;
+  const retentionEnabled = !!client?.retention_enabled;
 
   const categoryTotals = groupList
     .map((g) => ({
@@ -191,7 +207,15 @@ export default function InvoiceLedger({ drawId }) {
   };
 
   const updateInvoiceAmount = async (docId, amount) => {
-    await base44.entities.Document.update(docId, { amount });
+    const doc = allDocs.find((d) => d.id === docId);
+    const patch = { amount };
+    if (doc?.retention_rate != null) Object.assign(patch, retentionPatch(amount, doc.retention_rate));
+    await base44.entities.Document.update(docId, patch);
+    queryClient.invalidateQueries({ queryKey: ["documents"] });
+  };
+
+  const saveRetention = async (docId, patch) => {
+    await base44.entities.Document.update(docId, patch);
     queryClient.invalidateQueries({ queryKey: ["documents"] });
   };
 
@@ -439,6 +463,12 @@ export default function InvoiceLedger({ drawId }) {
                                 className="justify-end"
                               />
                             )}
+                            {retentionEnabled && line.hasInvoice && (
+                              <RetentionCell
+                                invoice={line.invoice}
+                                onSave={(patch) => saveRetention(line.invoice.id, patch)}
+                              />
+                            )}
                           </td>
                           <td className="px-3 py-2.5 align-top">
                             <Select value={line.recipient} onValueChange={(v) => updateRecipient(line.drawVendorId, v)}>
@@ -478,6 +508,8 @@ export default function InvoiceLedger({ drawId }) {
           </div>
 
           <CategoryTotals rows={categoryTotals} grandTotal={grandTotal} />
+
+          {retentionEnabled && <VendorRetentionTable rows={vendorRetention} />}
         </>
       )}
 
@@ -488,7 +520,13 @@ export default function InvoiceLedger({ drawId }) {
         clientId={drawCycle?.client_id}
         categories={categoryOptions}
       />
-      <AddInvoiceDialog open={addInvoiceOpen} onOpenChange={setAddInvoiceOpen} drawVendorId={addInvoiceDVId} drawId={drawId} />
+      <AddInvoiceDialog
+        open={addInvoiceOpen}
+        onOpenChange={setAddInvoiceOpen}
+        drawVendorId={addInvoiceDVId}
+        drawId={drawId}
+        retentionRate={retentionEnabled ? client?.retention_rate ?? 10 : null}
+      />
     </div>
   );
 }

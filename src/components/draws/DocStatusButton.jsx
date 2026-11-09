@@ -55,6 +55,9 @@ export default function DocStatusButton({ line, projectName, onAddInvoice, onSug
   const [emailDocId, setEmailDocId] = useState(null);
   const status = computeStatus(line);
   const interactive = line.hasInvoice || line.recipient === "vendor";
+  const vendorGross = line.vendorRetention?.gross ?? line.vendorTotal;
+  const vendorRetentionAmount = line.vendorRetention?.retained ?? 0;
+  const vendorNet = line.vendorRetention?.net ?? line.vendorTotal;
 
   const updateDoc = async (docId, patch) => {
     await base44.entities.Document.update(docId, patch);
@@ -234,7 +237,9 @@ export default function DocStatusButton({ line, projectName, onAddInvoice, onSug
           existingDocId={line.cond?.id}
           vendorName={line.vendorName}
           projectName={projectName}
-          drawAmount={line.vendorTotal}
+          drawAmount={vendorNet}
+          grossAmount={vendorGross}
+          retentionAmount={vendorRetentionAmount}
         />
       )}
       {uncondOpen && (
@@ -245,7 +250,9 @@ export default function DocStatusButton({ line, projectName, onAddInvoice, onSug
           drawVendorId={line.drawVendorId}
           vendorName={line.vendorName}
           projectName={projectName}
-          drawAmount={line.vendorTotal}
+          drawAmount={vendorNet}
+          grossAmount={vendorGross}
+          retentionAmount={vendorRetentionAmount}
         />
       )}
     </>

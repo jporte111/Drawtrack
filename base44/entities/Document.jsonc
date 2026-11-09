@@ -38,6 +38,19 @@
     "amount": {
       "type": "number"
     },
+    "retention_rate": {
+      "type": "number"
+    },
+    "retention_amount": {
+      "type": "number"
+    },
+    "net_paid_amount": {
+      "type": "number"
+    },
+    "paid_outside_draw": {
+      "type": "boolean",
+      "default": false
+    },
     "invoice_number": {
       "type": "string"
     },

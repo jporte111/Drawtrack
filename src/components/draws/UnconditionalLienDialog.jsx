@@ -7,8 +7,9 @@ import { Loader2, FileText, Upload } from "lucide-react";
 import LienFormFields from "./LienFormFields";
 import useLienContext from "@/hooks/useLienContext";
 import { useToast } from "@/components/ui/use-toast";
+import { formatCurrency } from "@/lib/format";
 
-export default function UnconditionalLienDialog({ open, onOpenChange, clientVendorId, drawVendorId, vendorName, projectName, drawAmount }) {
+export default function UnconditionalLienDialog({ open, onOpenChange, clientVendorId, drawVendorId, vendorName, projectName, drawAmount, grossAmount, retentionAmount }) {
   const queryClient = useQueryClient();
   const [busy, setBusy] = useState(null); // 'generate' | 'upload'
   const [error, setError] = useState(null);
@@ -127,6 +128,14 @@ export default function UnconditionalLienDialog({ open, onOpenChange, clientVend
           <div className="flex justify-between"><span className="text-slate-500">Vendor (Claimant):</span><span className="font-medium text-slate-900">{vendorName}</span></div>
           <div className="flex justify-between"><span className="text-slate-500">Project:</span><span className="font-medium text-slate-900">{drawCycle?.project_name || projectName || "—"}</span></div>
         </div>
+
+        {retentionAmount > 0 && (
+          <div className="bg-slate-50 rounded-lg p-4 space-y-2 text-sm mb-2">
+            <div className="flex justify-between"><span className="text-slate-500">Total invoiced:</span><span className="font-medium text-slate-900">{formatCurrency(grossAmount)}</span></div>
+            <div className="flex justify-between"><span className="text-slate-500">Less retention withheld:</span><span className="font-medium text-slate-900">−{formatCurrency(retentionAmount)}</span></div>
+            <div className="flex justify-between border-t pt-2"><span className="text-slate-600">Amount paid (on release):</span><span className="font-semibold text-slate-900">{formatCurrency(drawAmount)}</span></div>
+          </div>
+        )}
 
         <LienFormFields values={fields} onChange={setFields} />
 

@@ -32,6 +32,14 @@
     "track_vouchers": {
       "type": "boolean",
       "default": true
+    },
+    "retention_enabled": {
+      "type": "boolean",
+      "default": false
+    },
+    "retention_rate": {
+      "type": "number",
+      "default": 10
     }
   },
   "required": [

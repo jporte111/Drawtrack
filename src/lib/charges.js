@@ -1,4 +1,5 @@
 import { base44 } from "@/api/base44Client";
+import { retentionPatch } from "@/lib/retention";
 
 // Suggest a category from the project's own Schedule of Values only.
 // Returns { categoryId, matched } — never invents a category.
@@ -92,6 +93,11 @@ export async function createCharge({
     status: "pending",
   });
 
+  const client = clientId ? await base44.entities.Client.get(clientId) : null;
+  const retention = client?.retention_enabled
+    ? retentionPatch(amount, client.retention_rate ?? 10)
+    : {};
+
   const today = new Date().toISOString().slice(0, 10);
   await base44.entities.Document.create({
     draw_vendor_id: drawVendor.id,
@@ -100,6 +106,7 @@ export async function createCharge({
     review_status: reviewNeeded ? "needs_review" : "approved",
     file_url: fileUrl || null,
     amount: amount != null ? Number(amount) : null,
+    ...retention,
     invoice_number: invoiceNumber || "",
     invoice_date: invoiceDate || "",
     received_date: fileUrl ? today : "",
