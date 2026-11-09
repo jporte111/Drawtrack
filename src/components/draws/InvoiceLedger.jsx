@@ -11,6 +11,7 @@ import { categorizeExpense } from "@/lib/charges";
 import { exportLedgerCsv } from "@/lib/ledgerExport";
 import EditableAmount from "./EditableAmount";
 import EditableCategory from "./EditableCategory";
+import EditableVendorName from "./EditableVendorName";
 import CategoryTotals from "./CategoryTotals";
 import RetentionCell from "./RetentionCell";
 import VendorRetentionTable from "./VendorRetentionTable";
@@ -231,6 +232,49 @@ export default function InvoiceLedger({ drawId }) {
     }
   };
 
+  const createCategory = async (line, name) => {
+    try {
+      let budgetId = categoryOptions.find((c) => c.budget_id)?.budget_id;
+      if (!budgetId) {
+        const budgets = await base44.entities.Budget.filter({ client_id: drawCycle.client_id });
+        const active = budgets.find((b) => b.status !== "archived");
+        budgetId = active
+          ? active.id
+          : (await base44.entities.Budget.create({
+              client_id: drawCycle.client_id,
+              name: `${drawCycle.project_name || "Project"} Budget`,
+              budget_type: "internal",
+            })).id;
+      }
+      const created = await base44.entities.BudgetCategory.create({
+        budget_id: budgetId,
+        client_id: drawCycle.client_id,
+        name,
+        sort_order: categoryOptions.length,
+      });
+      await queryClient.invalidateQueries({ queryKey: ["budgetCategories", drawCycle?.client_id] });
+      await applyCategory(line, created.id);
+      toast({ title: "Category added", description: `${name} was added to the project budget.` });
+    } catch (e) {
+      toast({ variant: "destructive", title: "Could not add category", description: e.message });
+    }
+  };
+
+  const renameVendor = async (line, name) => {
+    try {
+      const dv = drawVendors.find((v) => v.id === line.drawVendorId);
+      if (dv?.vendor_id) {
+        await base44.entities.Vendor.update(dv.vendor_id, { name });
+        queryClient.invalidateQueries({ queryKey: ["vendors"] });
+      } else {
+        await base44.entities.DrawVendor.update(line.drawVendorId, { vendor_name: name });
+        queryClient.invalidateQueries({ queryKey: ["drawVendors", drawId] });
+      }
+    } catch (e) {
+      toast({ variant: "destructive", title: "Could not save vendor name", description: e.message });
+    }
+  };
+
   const flagForReview = async (line) => {
     if (!line.hasInvoice) return;
     await base44.entities.Document.update(line.invoice.id, { review_status: "needs_review" });
@@ -401,7 +445,7 @@ export default function InvoiceLedger({ drawId }) {
                       {group.lines.map((line) => (
                         <tr key={line.id} className="border-b last:border-0 hover:bg-slate-50">
                           <td className="px-3 py-2.5 font-medium text-slate-900 align-top">
-                            <div>{line.vendorName}</div>
+                            <EditableVendorName name={line.vendorName} onSave={(name) => renameVendor(line, name)} />
                             {(!line.hasInvoice || line.index === 0) && (
                               <>
                                 {line.scopeOfWork && (
@@ -423,6 +467,7 @@ export default function InvoiceLedger({ drawId }) {
                               categoryName={line.categoryName}
                               categories={categoryOptions}
                               onSave={(categoryId) => applyCategory(line, categoryId)}
+                              onCreate={(name) => createCategory(line, name)}
                             />
                           </td>
                           <td className="px-3 py-2.5 align-top">
