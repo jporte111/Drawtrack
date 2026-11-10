@@ -4,6 +4,26 @@ import { base44 } from "@/api/base44Client";
 // capitalization, spacing or punctuation ("Hardscape " vs "hardscape").
 export const normCategoryName = (s) => String(s || "").trim().toLowerCase().replace(/[^a-z0-9]/g, "");
 
+// One row per category name: duplicate category records collapse onto the first kept one.
+// `idToKept` maps every duplicate id to the record kept on screen, so amounts land in one row.
+export function dedupeCategories(categories = []) {
+  const seen = new Map();
+  const idToKept = new Map();
+  const kept = [];
+  for (const c of categories) {
+    const key = normCategoryName(c.name) || c.id;
+    const dup = seen.get(key);
+    if (dup) {
+      idToKept.set(c.id, dup);
+      continue;
+    }
+    seen.set(key, c);
+    idToKept.set(c.id, c);
+    kept.push(c);
+  }
+  return { categories: kept, idToKept };
+}
+
 // A project's authoritative budget is its most recently modified active budget.
 export async function getAuthoritativeBudget(clientId) {
   if (!clientId) return null;

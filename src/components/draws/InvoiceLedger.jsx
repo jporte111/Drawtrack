@@ -17,7 +17,7 @@ import CategoryTotals from "./CategoryTotals";
 import RetentionCell from "./RetentionCell";
 import VendorRetentionTable from "./VendorRetentionTable";
 import { DEFAULT_RETENTION_RATE, invoiceRetention, retentionPatch } from "@/lib/retention";
-import { findOrCreateCategory, getAuthoritativeBudget, loadProjectCategories } from "@/lib/budgetCategories";
+import { dedupeCategories, findOrCreateCategory, getAuthoritativeBudget, loadProjectCategories } from "@/lib/budgetCategories";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { useToast } from "@/components/ui/use-toast";
 
@@ -75,9 +75,16 @@ export default function InvoiceLedger({ drawId }) {
     enabled: !!drawCycle?.client_id,
   });
 
+  // Duplicate category records sharing a name collapse into a single row.
+  const { categories: uniqueCategories, idToKept } = useMemo(
+    () => dedupeCategories(budgetCategories),
+    [budgetCategories],
+  );
+
   const derived = useMemo(() => {
     const vendorMap = new Map(vendors.map((v) => [v.id, v]));
-    const catMap = new Map(budgetCategories.map((c) => [c.id, c]));
+    const catMap = new Map(uniqueCategories.map((c) => [c.id, c]));
+    const catFor = (catId) => (catId ? idToKept.get(catId) || null : null);
     const cvByVendor = new Map(clientVendors.map((cv) => [cv.vendor_id, cv.id]));
     const dvIds = new Set(drawVendors.map((dv) => dv.id));
 
@@ -106,19 +113,19 @@ export default function InvoiceLedger({ drawId }) {
     const addLine = (catId, line) => {
       const amt = typeof line.amount === "number" && isFinite(line.amount) ? line.amount : null;
       line.validAmount = amt;
-      line.categoryId = catId && catMap.has(catId) ? catId : null;
-      line.categoryName = (catId && catMap.get(catId)?.name) || "Uncategorized";
+      const cat = catFor(catId);
+      line.categoryId = cat ? cat.id : null;
+      line.categoryName = cat?.name || "Uncategorized";
       if (amt != null) {
         grandTotal += amt;
         const r = line.recipient === "jose" ? "jlm" : line.recipient || "vendor";
         recipientTotals[r] = (recipientTotals[r] || 0) + amt;
       }
-      if (catId && catMap.has(catId)) {
-        if (!groups[catId]) {
-          const c = catMap.get(catId);
-          groups[catId] = { name: c.name, sortOrder: c.sort_order || 0, lines: [] };
+      if (cat) {
+        if (!groups[cat.id]) {
+          groups[cat.id] = { name: cat.name, sortOrder: cat.sort_order || 0, lines: [] };
         }
-        groups[catId].lines.push(line);
+        groups[cat.id].lines.push(line);
       } else {
         uncategorized.lines.push(line);
       }
@@ -187,7 +194,7 @@ export default function InvoiceLedger({ drawId }) {
     if (uncategorized.lines.length > 0) groupList.push(uncategorized);
 
     return { groupList, grandTotal, recipientTotals, vendorRetention };
-  }, [drawVendors, vendors, allDocs, budgetCategories, clientVendors]);
+  }, [drawVendors, vendors, allDocs, uniqueCategories, idToKept, clientVendors]);
 
   const { groupList, grandTotal, recipientTotals, vendorRetention } = derived;
   const retentionEnabled = !!client?.retention_enabled;
@@ -200,7 +207,7 @@ export default function InvoiceLedger({ drawId }) {
     }))
     .sort((a, b) => b.total - a.total);
 
-  const categoryOptions = budgetCategories
+  const categoryOptions = uniqueCategories
     .filter((c) => c.status !== "archived")
     .slice()
     .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0) || (a.name || "").localeCompare(b.name || ""));

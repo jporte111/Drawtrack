@@ -5,15 +5,18 @@ import { Plus, Pencil, ExternalLink, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/format";
 import BudgetCategoryDialog from "./BudgetCategoryDialog";
+import { dedupeCategories } from "@/lib/budgetCategories";
 
 const ACTIVE_STATUSES = ["draft", "in_progress", "submitted", "under_review"];
 
 export default function BudgetMatrix({ clientId, budgetId, budgetSourceUrl }) {
-  const { data: categories = [] } = useQuery({
+  const { data: rawCategories = [] } = useQuery({
     queryKey: ["budgetCategories", budgetId],
     queryFn: () => base44.entities.BudgetCategory.filter({ budget_id: budgetId }),
     enabled: !!budgetId,
   });
+  // One row per category name, no matter how many duplicate records exist.
+  const { categories, idToKept } = useMemo(() => dedupeCategories(rawCategories), [rawCategories]);
   const { data: drawCycles = [] } = useQuery({
     queryKey: ["draws", clientId],
     queryFn: () => base44.entities.DrawCycle.filter({ client_id: clientId }),
@@ -50,7 +53,8 @@ export default function BudgetMatrix({ clientId, budgetId, budgetSourceUrl }) {
       if (!dv) continue;
       const drawId = dv.draw_cycle_id;
       // The invoice's own category wins, so budget totals always match the draw ledger.
-      const catId = inv.budget_category_id || dv.budget_category_id;
+      const rawCatId = inv.budget_category_id || dv.budget_category_id;
+      const catId = rawCatId ? idToKept.get(rawCatId)?.id : null;
       const target = catId && matrix[catId] ? matrix[catId] : uncategorized;
       if (!target[drawId]) target[drawId] = { approved: 0, pending: 0 };
       const amt = inv.amount || 0;
@@ -60,7 +64,7 @@ export default function BudgetMatrix({ clientId, budgetId, budgetSourceUrl }) {
 
     const sortedCategories = [...categories].sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
     return { draws, sortedCategories, matrix, uncategorized, hasUncategorized: Object.keys(uncategorized).length > 0 };
-  }, [categories, drawCycles, allDrawVendors, allDocs]);
+  }, [categories, idToKept, drawCycles, allDrawVendors, allDocs]);
 
   const { draws, sortedCategories, matrix, uncategorized, hasUncategorized } = derived;
 
