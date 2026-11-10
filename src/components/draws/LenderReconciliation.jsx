@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { AlertTriangle, CheckCircle2, ExternalLink } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
 
@@ -24,7 +23,7 @@ export default function LenderReconciliation({ drawId }) {
     queryFn: () => base44.entities.Document.list(),
   });
 
-  const { base44Total, approvedTotal } = useMemo(() => {
+  const { invoiceTotal, approvedTotal } = useMemo(() => {
     const dvIds = new Set(drawVendors.map((d) => d.id));
     const drawInvoices = allDocs.filter(
       (d) =>
@@ -32,23 +31,23 @@ export default function LenderReconciliation({ drawId }) {
         (d.document_type === "invoice" || d.document_type === "receipt")
     );
     return {
-      base44Total: drawInvoices.reduce((s, d) => s + (d.amount || 0), 0),
+      invoiceTotal: drawInvoices.reduce((s, d) => s + (d.amount || 0), 0),
       approvedTotal: drawInvoices
         .filter((d) => d.review_status === "approved")
         .reduce((s, d) => s + (d.amount || 0), 0),
     };
   }, [drawVendors, allDocs]);
 
-  const lenderDue = draw?.lender_current_payment_due ?? null;
+  // The lender's current payment due is the draw's invoice total unless someone overrides it.
+  const lenderDue = draw?.lender_current_payment_due ?? invoiceTotal;
 
   // Keep the input draft in sync with the saved value (e.g. after refetch or edits elsewhere)
   useEffect(() => {
     setLenderDraft(lenderDue == null ? "" : String(lenderDue));
   }, [lenderDue]);
 
-  const hasMismatch =
-    lenderDue != null && Math.abs((lenderDue || 0) - base44Total) > 0.005;
-  const difference = lenderDue != null ? (lenderDue || 0) - base44Total : 0;
+  const hasMismatch = Math.abs((lenderDue || 0) - invoiceTotal) > 0.005;
+  const difference = (lenderDue || 0) - invoiceTotal;
 
   const updateDraw = async (patch) => {
     const key = Object.keys(patch)[0];
@@ -64,42 +63,31 @@ export default function LenderReconciliation({ drawId }) {
 
   const commitLender = () => {
     const trimmed = lenderDraft.trim();
-    if (trimmed === "" || trimmed === String(lenderDue ?? "")) return;
+    if (trimmed === "") {
+      setLenderDraft(String(lenderDue ?? ""));
+      return;
+    }
+    if (trimmed === String(lenderDue ?? "")) return;
     const num = Number(trimmed);
     updateDraw({ lender_current_payment_due: isNaN(num) ? null : num });
-  };
-
-  const useApproved = () => {
-    setLenderDraft(String(approvedTotal));
-    updateDraw({ lender_current_payment_due: approvedTotal });
   };
 
   return (
     <div>
       <div className="mb-3">
         <h2 className="text-lg font-semibold text-slate-900">Lender Reconciliation</h2>
-        <p className="text-sm text-slate-500">Base44 invoice total vs lender payment due</p>
+        <p className="text-sm text-slate-500">Invoice total vs lender payment due</p>
       </div>
 
       <div className="grid sm:grid-cols-2 gap-3 mb-3">
         <div className="rounded-lg border p-3">
-          <div className="text-xs text-slate-500 mb-1">Base44 Invoice Total</div>
-          <div className="text-xl font-bold text-slate-900 tabular-nums">{formatCurrency(base44Total)}</div>
+          <div className="text-xs text-slate-500 mb-1">Invoice Total</div>
+          <div className="text-xl font-bold text-slate-900 tabular-nums">{formatCurrency(invoiceTotal)}</div>
           <div className="text-xs text-emerald-600 mt-1">{formatCurrency(approvedTotal)} approved</div>
         </div>
         <div className="rounded-lg border p-3">
           <div className="flex items-center justify-between mb-1">
             <span className="text-xs text-slate-500">Lender Current Payment Due</span>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-6 px-2 text-xs"
-              onClick={useApproved}
-              disabled={!!savingField}
-              title="Set to the approved invoice total"
-            >
-              Use approved
-            </Button>
           </div>
           <Input
             type="number"

@@ -12,6 +12,7 @@ import { exportLedgerCsv } from "@/lib/ledgerExport";
 import EditableAmount from "./EditableAmount";
 import EditableCategory from "./EditableCategory";
 import EditableVendorName from "./EditableVendorName";
+import EditableText from "./EditableText";
 import CategoryTotals from "./CategoryTotals";
 import RetentionCell from "./RetentionCell";
 import VendorRetentionTable from "./VendorRetentionTable";
@@ -223,6 +224,11 @@ export default function InvoiceLedger({ drawId }) {
   };
 
   const saveRetention = async (docId, patch) => {
+    await base44.entities.Document.update(docId, patch);
+    queryClient.invalidateQueries({ queryKey: ["documents"] });
+  };
+
+  const updateInvoiceField = async (docId, patch) => {
     await base44.entities.Document.update(docId, patch);
     queryClient.invalidateQueries({ queryKey: ["documents"] });
   };
@@ -471,20 +477,49 @@ export default function InvoiceLedger({ drawId }) {
                           </td>
                           <td className="px-3 py-2.5 align-top">
                             {line.hasInvoice ? (
-                              <a
-                                href={line.invoice.file_url || "#"}
-                                target={line.invoice.file_url ? "_blank" : undefined}
-                                rel="noopener noreferrer"
-                                className={`inline-flex items-center gap-1 ${line.invoice.file_url ? "text-blue-600 hover:underline" : "text-slate-400"}`}
-                              >
-                                <ExternalLink className="w-3 h-3 shrink-0" />
-                                {line.invoiceNumber ? `${line.docKind} ${line.invoiceNumber}` : `${line.docKind} ${line.index + 1}`}
-                              </a>
+                              <div className="flex items-start gap-1.5">
+                                {line.invoice.file_url && (
+                                  <a
+                                    href={line.invoice.file_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-blue-600 hover:underline mt-1 shrink-0"
+                                    title="Open the invoice file"
+                                  >
+                                    <ExternalLink className="w-3 h-3" />
+                                  </a>
+                                )}
+                                <div>
+                                  <div className="text-xs text-slate-400">{line.docKind}</div>
+                                  <EditableText
+                                    value={line.invoiceNumber}
+                                    onSave={(v) => updateInvoiceField(line.invoice.id, { invoice_number: v || "" })}
+                                    display={(v) => v || `#${line.index + 1}`}
+                                    placeholder={`#${line.index + 1}`}
+                                    title="Click to edit the invoice number"
+                                    inputClassName="w-[110px]"
+                                  />
+                                </div>
+                              </div>
                             ) : (
                               <span className="text-slate-400">No Invoice</span>
                             )}
                           </td>
-                          <td className="px-3 py-2.5 text-slate-600 align-top">{line.invoiceDate ? formatDate(line.invoiceDate) : "—"}</td>
+                          <td className="px-3 py-2.5 text-slate-600 align-top">
+                            {line.hasInvoice ? (
+                              <EditableText
+                                type="date"
+                                value={line.invoiceDate}
+                                onSave={(v) => updateInvoiceField(line.invoice.id, { invoice_date: v || "" })}
+                                display={(v) => (v ? formatDate(v) : "Add date")}
+                                placeholder="Add date"
+                                title="Click to edit the invoice date"
+                                inputClassName="w-[130px]"
+                              />
+                            ) : (
+                              "—"
+                            )}
+                          </td>
                           <td className="px-3 py-2.5 text-right tabular-nums font-medium text-slate-900 align-top">
                             {line.validAmount == null && line.hasInvoice ? (
                               <EditableAmount

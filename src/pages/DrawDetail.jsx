@@ -5,7 +5,7 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, Pencil, Send } from "lucide-react";
 import StatusBadge from "@/components/StatusBadge";
-import { formatCurrency, formatDate } from "@/lib/format";
+import { formatDate } from "@/lib/format";
 import { useToast } from "@/components/ui/use-toast";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -14,6 +14,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import DrawFormDialog from "@/components/draws/DrawFormDialog";
 import InvoiceLedger from "@/components/draws/InvoiceLedger";
+import EditableText from "@/components/draws/EditableText";
+import EditableAmount from "@/components/draws/EditableAmount";
 import LenderReconciliation from "@/components/draws/LenderReconciliation";
 import VoucherSection from "@/components/draws/VoucherSection";
 import ClientInvoiceSection from "@/components/invoices/ClientInvoiceSection";
@@ -49,6 +51,13 @@ export default function DrawDetail() {
     }
   };
 
+  const updateDraw = async (patch) => {
+    await base44.entities.DrawCycle.update(id, patch);
+    queryClient.invalidateQueries({ queryKey: ["draw", id] });
+    queryClient.invalidateQueries({ queryKey: ["drawCycle", id] });
+    queryClient.invalidateQueries({ queryKey: ["draws"] });
+  };
+
   const { data: draw, isLoading } = useQuery({
     queryKey: ["draw", id],
     queryFn: () => base44.entities.DrawCycle.get(id),
@@ -78,13 +87,38 @@ export default function DrawDetail() {
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 mb-6">
         <div className="min-w-0">
           <div className="flex items-center gap-3 mb-1">
-            <h1 className="text-2xl font-bold text-slate-900">{draw.name}</h1>
+            <h1 className="text-2xl font-bold text-slate-900">
+              <EditableText
+                value={draw.name}
+                onSave={(v) => v && updateDraw({ name: v })}
+                title="Click to rename this draw"
+                inputClassName="text-base w-[240px]"
+              />
+            </h1>
             <StatusBadge status={draw.status} />
           </div>
           <p className="text-slate-500">{draw.project_name}</p>
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-sm text-slate-500">
-            {draw.draw_date && <span>Date: {formatDate(draw.draw_date)}</span>}
-            <span>Amount: {formatCurrency(draw.amount)}</span>
+            <span className="flex items-center gap-1">
+              Date:
+              <EditableText
+                type="date"
+                value={draw.draw_date}
+                onSave={(v) => updateDraw({ draw_date: v })}
+                display={(v) => (v ? formatDate(v) : "Add date")}
+                placeholder="Add date"
+                title="Click to edit the draw date"
+                inputClassName="w-[130px]"
+              />
+            </span>
+            <span className="flex items-center gap-1">
+              Amount:
+              <EditableAmount
+                amount={draw.amount}
+                onSave={(v) => updateDraw({ amount: v })}
+                className="text-sm text-slate-600"
+              />
+            </span>
           </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
