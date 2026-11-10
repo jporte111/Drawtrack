@@ -4,6 +4,10 @@ import { base44 } from "@/api/base44Client";
 // capitalization, spacing or punctuation ("Hardscape " vs "hardscape").
 export const normCategoryName = (s) => String(s || "").trim().toLowerCase().replace(/[^a-z0-9]/g, "");
 
+// Same key as above, but a trailing plural "s" is ignored, so
+// "Hardscape" and "Hardscapes" total on one line.
+export const totalsKey = (s) => normCategoryName(s).replace(/s$/, "");
+
 // One row per category name: duplicate category records collapse onto the first kept one.
 // `idToKept` maps every duplicate id to the record kept on screen, so amounts land in one row.
 export function dedupeCategories(categories = []) {

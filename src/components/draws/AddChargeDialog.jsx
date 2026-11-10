@@ -29,7 +29,7 @@ const emptyForm = {
   needs_review: false,
 };
 
-export default function AddChargeDialog({ open, onOpenChange, drawId, clientId, categories = [] }) {
+export default function AddChargeDialog({ open, onOpenChange, drawId, clientId, categories = [], initialFiles = [] }) {
   const queryClient = useQueryClient();
   const categorizedRef = useRef(false);
   const [mode, setMode] = useState("manual");
@@ -45,10 +45,15 @@ export default function AddChargeDialog({ open, onOpenChange, drawId, clientId, 
 
   useEffect(() => {
     if (!open) return;
-    setMode("manual");
-    setRows([]);
     setForm(emptyForm);
+    setRows([]);
     categorizedRef.current = false;
+    if (initialFiles.length > 0) {
+      setMode("upload");
+      handleFiles(initialFiles);
+    } else {
+      setMode("manual");
+    }
   }, [open]);
 
   const set = (patch) => setForm((prev) => ({ ...prev, ...patch }));

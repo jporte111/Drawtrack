@@ -17,7 +17,7 @@ import CategoryTotals from "./CategoryTotals";
 import RetentionCell from "./RetentionCell";
 import VendorRetentionTable from "./VendorRetentionTable";
 import { DEFAULT_RETENTION_RATE, invoiceRetention, retentionPatch } from "@/lib/retention";
-import { dedupeCategories, findOrCreateCategory, getAuthoritativeBudget, loadProjectCategories } from "@/lib/budgetCategories";
+import { dedupeCategories, findOrCreateCategory, getAuthoritativeBudget, loadProjectCategories, totalsKey } from "@/lib/budgetCategories";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { useToast } from "@/components/ui/use-toast";
 
@@ -36,6 +36,8 @@ export default function InvoiceLedger({ drawId }) {
   const [addInvoiceDVId, setAddInvoiceDVId] = useState(null);
   const [categorizing, setCategorizing] = useState(false);
   const [catProgress, setCatProgress] = useState("");
+  const [droppedFiles, setDroppedFiles] = useState([]);
+  const [dragOver, setDragOver] = useState(false);
 
   const { data: drawCycle } = useQuery({
     queryKey: ["drawCycle", drawId],
@@ -122,10 +124,11 @@ export default function InvoiceLedger({ drawId }) {
         recipientTotals[r] = (recipientTotals[r] || 0) + amt;
       }
       if (cat) {
-        if (!groups[cat.id]) {
-          groups[cat.id] = { name: cat.name, sortOrder: cat.sort_order || 0, lines: [] };
+        const groupKey = totalsKey(cat.name) || cat.id;
+        if (!groups[groupKey]) {
+          groups[groupKey] = { name: cat.name, sortOrder: cat.sort_order || 0, lines: [] };
         }
-        groups[cat.id].lines.push(line);
+        groups[groupKey].lines.push(line);
       } else {
         uncategorized.lines.push(line);
       }
@@ -397,9 +400,32 @@ export default function InvoiceLedger({ drawId }) {
           <Button size="sm" variant="outline" onClick={autoCategorizeAll} disabled={categorizing}>
             <Sparkles className="w-4 h-4 mr-1" />{categorizing ? (catProgress || "Categorizing...") : "Auto-Categorize"}
           </Button>
-          <Button size="sm" onClick={() => setAddChargeOpen(true)}>
-            <Plus className="w-4 h-4 mr-1" />Add Invoice
-          </Button>
+          <div
+            onDragOver={(e) => {
+              e.preventDefault();
+              setDragOver(true);
+            }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={(e) => {
+              e.preventDefault();
+              setDragOver(false);
+              const files = Array.from(e.dataTransfer.files || []).filter((f) =>
+                /\.(pdf|png|jpe?g)$/i.test(f.name),
+              );
+              if (!files.length) return;
+              setDroppedFiles(files);
+              setAddChargeOpen(true);
+            }}
+            className="rounded-md"
+          >
+            <Button
+              size="sm"
+              onClick={() => setAddChargeOpen(true)}
+              className={dragOver ? "bg-slate-900 ring-2 ring-slate-900/30 ring-offset-1" : ""}
+            >
+              <Plus className="w-4 h-4 mr-1" />{dragOver ? "Drop invoices here" : "Add Invoice"}
+            </Button>
+          </div>
           <Button
             size="sm"
             variant="outline"
@@ -601,10 +627,14 @@ export default function InvoiceLedger({ drawId }) {
 
       <AddChargeDialog
         open={addChargeOpen}
-        onOpenChange={setAddChargeOpen}
+        onOpenChange={(o) => {
+          setAddChargeOpen(o);
+          if (!o) setDroppedFiles([]);
+        }}
         drawId={drawId}
         clientId={drawCycle?.client_id}
         categories={categoryOptions}
+        initialFiles={droppedFiles}
       />
       <AddInvoiceDialog
         open={addInvoiceOpen}
