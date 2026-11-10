@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { DollarSign, ExternalLink, Pencil, ArrowLeft, Plus } from "lucide-react";
 import BudgetMatrix from "@/components/budget/BudgetMatrix";
 import BudgetFormDialog from "@/components/budget/BudgetFormDialog";
+import { getAuthoritativeBudget } from "@/lib/budgetCategories";
 
 export default function Budget() {
   const { clientId } = useParams();
@@ -30,10 +31,11 @@ export default function Budget() {
     queryFn: () => base44.entities.Budget.filter({ client_id: clientId }),
   });
 
-  // Auto-select first budget once loaded
+  // Default to the project's authoritative budget: the most recently modified active one.
   React.useEffect(() => {
-    if (!selectedBudgetId && budgets.length > 0) setSelectedBudgetId(budgets[0].id);
-  }, [budgets, selectedBudgetId]);
+    if (selectedBudgetId || budgets.length === 0) return;
+    getAuthoritativeBudget(clientId).then((b) => setSelectedBudgetId(b?.id || budgets[0].id));
+  }, [budgets, selectedBudgetId, clientId]);
 
   const rawBudgetUrl = client?.budget_url;
   const budgetUrl = rawBudgetUrl && /^https?:\/\//i.test(rawBudgetUrl) ? rawBudgetUrl : null;

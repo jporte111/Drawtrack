@@ -49,7 +49,8 @@ export default function BudgetMatrix({ clientId, budgetId, budgetSourceUrl }) {
       const dv = dvById.get(inv.draw_vendor_id);
       if (!dv) continue;
       const drawId = dv.draw_cycle_id;
-      const catId = dv.budget_category_id;
+      // The invoice's own category wins, so budget totals always match the draw ledger.
+      const catId = inv.budget_category_id || dv.budget_category_id;
       const target = catId && matrix[catId] ? matrix[catId] : uncategorized;
       if (!target[drawId]) target[drawId] = { approved: 0, pending: 0 };
       const amt = inv.amount || 0;
