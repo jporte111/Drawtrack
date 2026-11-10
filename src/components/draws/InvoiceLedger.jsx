@@ -16,14 +16,15 @@ import CategoryTotals from "./CategoryTotals";
 import RetentionCell from "./RetentionCell";
 import VendorRetentionTable from "./VendorRetentionTable";
 import { DEFAULT_RETENTION_RATE, invoiceRetention, retentionPatch } from "@/lib/retention";
+import { findOrCreateCategory, getAuthoritativeBudget, loadProjectCategories } from "@/lib/budgetCategories";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { useToast } from "@/components/ui/use-toast";
 
+// JLM and Jose are the same person — one payee, one label.
 const RECIPIENTS = [
   { value: "vendor", label: "Vendor" },
   { value: "jlm", label: "JLM" },
   { value: "mike", label: "Mike" },
-  { value: "jose", label: "Jose" },
 ];
 
 export default function InvoiceLedger({ drawId }) {
@@ -51,9 +52,15 @@ export default function InvoiceLedger({ drawId }) {
     queryKey: ["documents"],
     queryFn: () => base44.entities.Document.list(),
   });
+  // One authoritative category list per project: its most recently modified budget.
+  const { data: projectBudget = null } = useQuery({
+    queryKey: ["projectBudget", drawCycle?.client_id],
+    queryFn: () => getAuthoritativeBudget(drawCycle.client_id),
+    enabled: !!drawCycle?.client_id,
+  });
   const { data: budgetCategories = [] } = useQuery({
-    queryKey: ["budgetCategories", drawCycle?.client_id],
-    queryFn: () => base44.entities.BudgetCategory.filter({ client_id: drawCycle.client_id }),
+    queryKey: ["projectCategories", drawCycle?.client_id],
+    queryFn: () => loadProjectCategories(drawCycle.client_id).then((r) => r.categories),
     enabled: !!drawCycle?.client_id,
   });
   const { data: clientVendors = [] } = useQuery({
@@ -91,7 +98,7 @@ export default function InvoiceLedger({ drawId }) {
 
     const groups = {};
     const uncategorized = { name: "Uncategorized", sortOrder: 9999, lines: [] };
-    const recipientTotals = { vendor: 0, jlm: 0, mike: 0, jose: 0 };
+    const recipientTotals = { vendor: 0, jlm: 0, mike: 0 };
     const vendorRetention = [];
     let grandTotal = 0;
 
@@ -102,7 +109,7 @@ export default function InvoiceLedger({ drawId }) {
       line.categoryName = (catId && catMap.get(catId)?.name) || "Uncategorized";
       if (amt != null) {
         grandTotal += amt;
-        const r = line.recipient || "vendor";
+        const r = line.recipient === "jose" ? "jlm" : line.recipient || "vendor";
         recipientTotals[r] = (recipientTotals[r] || 0) + amt;
       }
       if (catId && catMap.has(catId)) {
@@ -234,27 +241,19 @@ export default function InvoiceLedger({ drawId }) {
 
   const createCategory = async (line, name) => {
     try {
-      let budgetId = categoryOptions.find((c) => c.budget_id)?.budget_id;
-      if (!budgetId) {
-        const budgets = await base44.entities.Budget.filter({ client_id: drawCycle.client_id });
-        const active = budgets.find((b) => b.status !== "archived");
-        budgetId = active
-          ? active.id
-          : (await base44.entities.Budget.create({
-              client_id: drawCycle.client_id,
-              name: `${drawCycle.project_name || "Project"} Budget`,
-              budget_type: "internal",
-            })).id;
-      }
-      const created = await base44.entities.BudgetCategory.create({
-        budget_id: budgetId,
-        client_id: drawCycle.client_id,
+      const category = await findOrCreateCategory({
+        clientId: drawCycle.client_id,
+        projectName: drawCycle.project_name,
         name,
-        sort_order: categoryOptions.length,
+        budget: projectBudget,
+        categories: budgetCategories,
       });
-      await queryClient.invalidateQueries({ queryKey: ["budgetCategories", drawCycle?.client_id] });
-      await applyCategory(line, created.id);
-      toast({ title: "Category added", description: `${name} was added to the project budget.` });
+      if (!category) return;
+      await queryClient.invalidateQueries({ queryKey: ["projectCategories", drawCycle?.client_id] });
+      await queryClient.invalidateQueries({ queryKey: ["projectBudget", drawCycle?.client_id] });
+      await queryClient.invalidateQueries({ queryKey: ["budgetCategories"] });
+      await applyCategory(line, category.id);
+      toast({ title: "Category assigned", description: `${category.name} is in the project budget.` });
     } catch (e) {
       toast({ variant: "destructive", title: "Could not add category", description: e.message });
     }
@@ -545,11 +544,10 @@ export default function InvoiceLedger({ drawId }) {
             </table>
           </div>
 
-          <div className="mt-4 grid grid-cols-2 sm:grid-cols-5 gap-3">
+          <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
             <SummaryCard label="Vendor Payments" value={recipientTotals.vendor} />
-            <SummaryCard label="Mike Reimbursements" value={recipientTotals.mike} />
-            <SummaryCard label="Jose Reimbursements" value={recipientTotals.jose} />
             <SummaryCard label="JLM" value={recipientTotals.jlm} />
+            <SummaryCard label="Mike Reimbursements" value={recipientTotals.mike} />
             <SummaryCard label="Grand Total" value={grandTotal} strong />
           </div>
 
