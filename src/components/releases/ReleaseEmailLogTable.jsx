@@ -1,4 +1,5 @@
 import React from "react";
+import ResendReleaseButton from "@/components/releases/ResendReleaseButton";
 
 const STATUS_STYLES = {
   sent: "bg-emerald-100 text-emerald-700",
@@ -61,6 +62,7 @@ export default function ReleaseEmailLogTable({ logs = [], showClient = false, is
                 <div className="truncate" title={log.subject}>{log.subject || "—"}</div>
                 {log.error_message && <div className="text-xs text-red-600 mt-0.5">{log.error_message}</div>}
                 {log.status === "duplicate" && <div className="text-xs text-amber-600 mt-0.5">Already sent — skipped</div>}
+                {log.status === "failed" && log.document_id && <ResendReleaseButton log={log} />}
               </td>
             </tr>
           ))}
