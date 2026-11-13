@@ -101,6 +101,9 @@
       ],
       "default": "manual"
     },
+    "sort_order": {
+      "type": "number"
+    },
     "notes": {
       "type": "string"
     }

@@ -40,6 +40,9 @@
       ],
       "default": "pending"
     },
+    "sort_order": {
+      "type": "number"
+    },
     "notes": {
       "type": "string"
     }

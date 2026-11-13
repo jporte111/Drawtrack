@@ -3,7 +3,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, FileText, ExternalLink, Sparkles, Download, AlertTriangle } from "lucide-react";
+import { Plus, FileText, ExternalLink, Sparkles, Download, AlertTriangle, GripVertical, CalendarClock } from "lucide-react";
+import { readInvoiceDate } from "@/lib/invoiceDate";
 import DocStatusButton from "./DocStatusButton";
 import AddChargeDialog from "./AddChargeDialog";
 import AddInvoiceDialog from "./AddInvoiceDialog";
@@ -38,6 +39,12 @@ export default function InvoiceLedger({ drawId }) {
   const [catProgress, setCatProgress] = useState("");
   const [droppedFiles, setDroppedFiles] = useState([]);
   const [dragOver, setDragOver] = useState(false);
+  const [dating, setDating] = useState(false);
+  const [dateProgress, setDateProgress] = useState("");
+  // Drag-to-reorder: the line being dragged, plus the order each group shows while it settles.
+  const [drag, setDrag] = useState(null);
+  const [dragTarget, setDragTarget] = useState(null);
+  const [orderOverride, setOrderOverride] = useState({});
 
   const { data: drawCycle } = useQuery({
     queryKey: ["drawCycle", drawId],
@@ -107,7 +114,7 @@ export default function InvoiceLedger({ drawId }) {
     }
 
     const groups = {};
-    const uncategorized = { name: "Uncategorized", sortOrder: 9999, lines: [] };
+    const uncategorized = { key: "__uncategorized", name: "Uncategorized", sortOrder: 9999, lines: [] };
     const recipientTotals = { vendor: 0, jlm: 0, mike: 0 };
     const vendorRetention = [];
     let grandTotal = 0;
@@ -126,7 +133,7 @@ export default function InvoiceLedger({ drawId }) {
       if (cat) {
         const groupKey = totalsKey(cat.name) || cat.id;
         if (!groups[groupKey]) {
-          groups[groupKey] = { name: cat.name, sortOrder: cat.sort_order || 0, lines: [] };
+          groups[groupKey] = { key: groupKey, name: cat.name, sortOrder: cat.sort_order || 0, lines: [] };
         }
         groups[groupKey].lines.push(line);
       } else {
@@ -175,6 +182,7 @@ export default function InvoiceLedger({ drawId }) {
             cond: condByInvoice[inv.id] || condByDV[dv.id],
             uncond: cvId ? uncondByCV[cvId] : undefined,
             docKind: inv.document_type === "receipt" ? "Receipt" : "Invoice",
+            sortOrder: inv.sort_order,
             index: i,
           });
         });
@@ -187,6 +195,7 @@ export default function InvoiceLedger({ drawId }) {
           invoiceNumber: "",
           invoiceDate: "",
           amount: dv.amount,
+          sortOrder: dv.sort_order,
           cond: null,
           uncond: cvId ? uncondByCV[cvId] : undefined,
         });
@@ -195,6 +204,14 @@ export default function InvoiceLedger({ drawId }) {
 
     const groupList = Object.values(groups).sort((a, b) => a.sortOrder - b.sortOrder);
     if (uncategorized.lines.length > 0) groupList.push(uncategorized);
+
+    // A manually dragged order wins; lines never reordered keep their natural order.
+    const bySort = (a, b) => {
+      const av = typeof a.sortOrder === "number" ? a.sortOrder : Number.MAX_SAFE_INTEGER;
+      const bv = typeof b.sortOrder === "number" ? b.sortOrder : Number.MAX_SAFE_INTEGER;
+      return av - bv;
+    };
+    groupList.forEach((g) => g.lines.sort(bySort));
 
     return { groupList, grandTotal, recipientTotals, vendorRetention };
   }, [drawVendors, vendors, allDocs, uniqueCategories, idToKept, clientVendors]);
@@ -367,6 +384,111 @@ export default function InvoiceLedger({ drawId }) {
     setAddInvoiceOpen(true);
   };
 
+  // Reads the date off each invoice file that has none yet.
+  const fillMissingDates = async () => {
+    const targets = [];
+    groupList.forEach((g) =>
+      g.lines.forEach((line) => {
+        if (line.hasInvoice && line.invoice?.file_url && !line.invoiceDate) targets.push(line.invoice);
+      }),
+    );
+    if (targets.length === 0) {
+      toast({ title: "Every invoice already has a date" });
+      return;
+    }
+    setDating(true);
+    let filled = 0;
+    try {
+      for (let i = 0; i < targets.length; i++) {
+        setDateProgress(`${i + 1}/${targets.length}`);
+        try {
+          const date = await readInvoiceDate(targets[i].file_url);
+          if (date) {
+            await base44.entities.Document.update(targets[i].id, { invoice_date: date });
+            filled += 1;
+          }
+        } catch (e) { /* skip this file */ }
+      }
+      queryClient.invalidateQueries({ queryKey: ["documents"] });
+      toast({
+        title: "Invoice dates updated",
+        description: `${filled} of ${targets.length} invoice${targets.length === 1 ? "" : "s"} dated from their files.`,
+      });
+    } finally {
+      setDating(false);
+      setDateProgress("");
+    }
+  };
+
+  // Reorder by dragging a row's handle; the new order is saved on the records.
+  const linesById = useMemo(() => {
+    const map = new Map();
+    groupList.forEach((g) => g.lines.forEach((l) => map.set(l.id, l)));
+    return map;
+  }, [groupList]);
+
+  const displayLines = (group) => {
+    const order = orderOverride[group.key];
+    if (!order) return group.lines;
+    const byId = new Map(group.lines.map((l) => [l.id, l]));
+    const ordered = order.map((id) => byId.get(id)).filter(Boolean);
+    const seen = new Set(ordered.map((l) => l.id));
+    return [...ordered, ...group.lines.filter((l) => !seen.has(l.id))];
+  };
+
+  const persistOrder = async (order) => {
+    const updates = [];
+    order.forEach((id, i) => {
+      const line = linesById.get(id);
+      if (!line) return;
+      const sort_order = (i + 1) * 10;
+      if (line.sortOrder === sort_order) return;
+      updates.push(
+        line.hasInvoice
+          ? base44.entities.Document.update(line.invoice.id, { sort_order })
+          : base44.entities.DrawVendor.update(line.drawVendorId, { sort_order }),
+      );
+    });
+    if (updates.length === 0) return;
+    await Promise.all(updates);
+    queryClient.invalidateQueries({ queryKey: ["documents"] });
+    queryClient.invalidateQueries({ queryKey: ["drawVendors", drawId] });
+  };
+
+  const startDrag = (groupKey, lineId) => (e) => {
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", lineId);
+    setDrag({ groupKey, lineId });
+    setDragTarget(null);
+  };
+
+  const dragEnter = (groupKey, lineId) => (e) => {
+    if (!drag || drag.groupKey !== groupKey || drag.lineId === lineId) return;
+    e.preventDefault();
+    setDragTarget({ groupKey, lineId });
+  };
+
+  const endDrag = () => {
+    setDrag(null);
+    setDragTarget(null);
+  };
+
+  // Dropping a line onto another in its own group moves it to that slot and saves the order.
+  const dropOn = (group) => async (e) => {
+    if (!drag || drag.groupKey !== group.key || !dragTarget) return;
+    e.preventDefault();
+    const draggedId = drag.lineId;
+    const targetId = dragTarget.lineId;
+    endDrag();
+    const ids = displayLines(group).map((l) => l.id);
+    const from = ids.indexOf(draggedId);
+    const to = ids.indexOf(targetId);
+    if (from < 0 || to < 0 || from === to) return;
+    ids.splice(to, 0, ids.splice(from, 1)[0]);
+    setOrderOverride((prev) => ({ ...prev, [group.key]: ids }));
+    await persistOrder(ids);
+  };
+
   const lineCount = groupList.reduce((s, g) => s + g.lines.length, 0);
   const missingCount = groupList.reduce(
     (sum, g) => sum + g.lines.filter((l) => !l.invoice?.file_url).length,
@@ -399,6 +521,10 @@ export default function InvoiceLedger({ drawId }) {
         <div className="flex flex-wrap items-center gap-2 shrink-0">
           <Button size="sm" variant="outline" onClick={autoCategorizeAll} disabled={categorizing}>
             <Sparkles className="w-4 h-4 mr-1" />{categorizing ? (catProgress || "Categorizing...") : "Auto-Categorize"}
+          </Button>
+          <Button size="sm" variant="outline" onClick={fillMissingDates} disabled={dating}>
+            <CalendarClock className="w-4 h-4 mr-1" />
+            {dating ? (dateProgress ? `Reading dates ${dateProgress}` : "Reading dates...") : "Get Invoice Dates"}
           </Button>
           <div
             onDragOver={(e) => {
@@ -466,10 +592,11 @@ export default function InvoiceLedger({ drawId }) {
               </thead>
               <tbody>
                 {groupList.map((group) => {
+                  const groupedLines = displayLines(group);
                   const subtotal = group.lines.reduce((s, l) => s + (l.validAmount || 0), 0);
                   const needsReview = group.lines.some((l) => l.validAmount == null);
                   return (
-                    <React.Fragment key={group.name}>
+                    <React.Fragment key={group.key}>
                       <tr className="bg-slate-100/70 border-b">
                         <td colSpan={7} className="px-3 py-2">
                           <div className="flex items-center justify-end">
@@ -480,10 +607,34 @@ export default function InvoiceLedger({ drawId }) {
                           </div>
                         </td>
                       </tr>
-                      {group.lines.map((line) => (
-                        <tr key={line.id} className="border-b last:border-0 hover:bg-slate-50">
+                      {groupedLines.map((line) => (
+                        <tr
+                          key={line.id}
+                          onDragOver={(e) => {
+                            if (drag && drag.groupKey === group.key) e.preventDefault();
+                          }}
+                          onDragEnter={dragEnter(group.key, line.id)}
+                          onDrop={dropOn(group)}
+                          className={`border-b last:border-0 hover:bg-slate-50 ${
+                            drag?.lineId === line.id ? "opacity-40" : ""
+                          } ${drag && dragTarget?.lineId === line.id ? "bg-slate-100" : ""}`}
+                        >
                           <td className="px-3 py-2.5 font-medium text-slate-900 align-top">
-                            <EditableVendorName name={line.vendorName} onSave={(name) => renameVendor(line, name)} />
+                            <div className="flex items-start gap-1">
+                              <span
+                                draggable
+                                onDragStart={startDrag(group.key, line.id)}
+                                onDragEnd={endDrag}
+                                onClick={(e) => e.preventDefault()}
+                                title="Drag to reorder this line"
+                                className="mt-0.5 shrink-0 cursor-grab text-slate-300 hover:text-slate-500 active:cursor-grabbing"
+                              >
+                                <GripVertical className="w-3.5 h-3.5" />
+                              </span>
+                              <div className="min-w-0">
+                                <EditableVendorName name={line.vendorName} onSave={(name) => renameVendor(line, name)} />
+                              </div>
+                            </div>
                             {(!line.hasInvoice || line.index === 0) && (
                               <>
                                 {line.scopeOfWork && (

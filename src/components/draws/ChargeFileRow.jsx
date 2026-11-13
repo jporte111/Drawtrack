@@ -61,6 +61,13 @@ export default function ChargeFileRow({ item, vendorOptions, onChange, onRemove 
           placeholder="Inv. #"
           className="h-8 w-24"
         />
+        <Input
+          type="date"
+          value={item.invoice_date || ""}
+          onChange={(e) => update({ invoice_date: e.target.value })}
+          title="Invoice date — read from the file, editable"
+          className="h-8 w-36"
+        />
       </div>
     </div>
   );

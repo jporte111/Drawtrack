@@ -4,12 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Upload, Loader2, CheckCircle, X } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { normalizeInvoiceDate } from "@/lib/invoiceDate";
 
 export const EXTRACTION_SCHEMA = {
   type: "object",
   properties: {
     vendor_name: { type: "string", description: "Name of the vendor/company that issued this invoice or receipt" },
     invoice_number: { type: "string", description: "Invoice or receipt number printed on the document" },
+    invoice_date: { type: "string", description: "The invoice date printed on the document, formatted YYYY-MM-DD" },
     amount: { type: "number", description: "Total amount in dollars" },
     scope_of_work: { type: "string", description: "Description of work, services, or items provided" },
     contact_name: { type: "string", description: "Contact person name if available" },
@@ -43,6 +45,8 @@ export default function InvoiceItem({ invoice, onChange, onRemove, onExtracted }
           uploading: false,
           amount: result.output.amount != null ? String(result.output.amount) : invoice.amount,
           invoice_number: result.output.invoice_number || invoice.invoice_number || "",
+          invoice_date:
+            normalizeInvoiceDate(result.output.invoice_date) || invoice.invoice_date || "",
           extractedData: result.output,
         });
         if (onExtracted) onExtracted(result.output);

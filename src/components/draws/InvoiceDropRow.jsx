@@ -75,6 +75,13 @@ export default function InvoiceDropRow({ invoice, vendorOptions, onChange, onRem
           placeholder="Inv. #"
           className="h-8 w-32"
         />
+        <Input
+          type="date"
+          value={invoice.invoice_date || ""}
+          onChange={(e) => update({ invoice_date: e.target.value })}
+          title="Invoice date — read from the file, editable"
+          className="h-8 w-36"
+        />
       </div>
     </div>
   );

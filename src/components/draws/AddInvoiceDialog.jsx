@@ -10,6 +10,7 @@ import InvoiceDropZone from "./InvoiceDropZone";
 import InvoiceDropRow from "./InvoiceDropRow";
 import { retentionPatch } from "@/lib/retention";
 import { resolveMasterVendor } from "@/lib/charges";
+import { normalizeInvoiceDate } from "@/lib/invoiceDate";
 import { useToast } from "@/components/ui/use-toast";
 
 const norm = (s) => String(s || "").trim().toLowerCase().replace(/[^a-z0-9]/g, "");
@@ -23,6 +24,7 @@ const blankItem = (over = {}) => ({
   error: "",
   amount: "",
   invoice_number: "",
+  invoice_date: "",
   doc_type: "invoice",
   vendor_id: null,
   vendor_name: "",
@@ -118,6 +120,7 @@ export default function AddInvoiceDialog({ open, onOpenChange, drawVendorId, dra
         uploading: false,
         amount: out.amount != null ? String(out.amount) : "",
         invoice_number: out.invoice_number || "",
+        invoice_date: normalizeInvoiceDate(out.invoice_date),
         ...matchVendor(out.vendor_name),
       });
     } catch (err) {
@@ -216,6 +219,7 @@ export default function AddInvoiceDialog({ open, onOpenChange, drawVendorId, dra
             file_url: row.file_url || null,
             amount,
             invoice_number: row.invoice_number || "",
+            invoice_date: row.invoice_date || "",
             received_date: row.file_url ? today : "",
             ...(retentionRate != null ? retentionPatch(amount, retentionRate) : {}),
           });

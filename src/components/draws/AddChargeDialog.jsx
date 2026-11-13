@@ -12,6 +12,7 @@ import { EXTRACTION_SCHEMA } from "./InvoiceItem";
 import InvoiceDropZone from "./InvoiceDropZone";
 import ChargeFileRow from "./ChargeFileRow";
 import { categorizeExpense, createCharge } from "@/lib/charges";
+import { normalizeInvoiceDate } from "@/lib/invoiceDate";
 import { formatCurrency } from "@/lib/format";
 
 const UNCATEGORIZED = "__none__";
@@ -102,6 +103,7 @@ export default function AddChargeDialog({ open, onOpenChange, drawId, clientId, 
         uploading: false,
         amount: data.amount != null ? String(data.amount) : "",
         invoice_number: data.invoice_number || "",
+        invoice_date: normalizeInvoiceDate(data.invoice_date),
         ...matchVendor(data.vendor_name),
       });
 
@@ -128,6 +130,7 @@ export default function AddChargeDialog({ open, onOpenChange, drawId, clientId, 
       error: "",
       amount: "",
       invoice_number: "",
+      invoice_date: "",
       vendor_id: "",
       vendor_name: "",
       needsReview: true,
@@ -184,7 +187,7 @@ export default function AddChargeDialog({ open, onOpenChange, drawId, clientId, 
             amount: Number(row.amount),
             fileUrl: row.file_url,
             invoiceNumber: row.invoice_number,
-            invoiceDate: form.invoice_date,
+            invoiceDate: row.invoice_date || form.invoice_date,
             reviewNeeded: form.needs_review || !form.budget_category_id,
           });
         }
