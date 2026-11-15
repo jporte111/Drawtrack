@@ -496,8 +496,31 @@ export default function InvoiceLedger({ drawId }) {
   );
   const ownerNames = [client?.name].filter(Boolean).join(", ");
 
+  // Invoice files can be dropped anywhere on the ledger, for every client's draw.
+  const isFileDrag = (e) => Array.from(e.dataTransfer?.types || []).includes("Files");
+
+  const handleDragOver = (e) => {
+    if (!isFileDrag(e)) return;
+    e.preventDefault();
+    setDragOver(true);
+  };
+
+  const handleDragLeave = (e) => {
+    if (!e.currentTarget.contains(e.relatedTarget)) setDragOver(false);
+  };
+
+  const handleFileDrop = (e) => {
+    if (!isFileDrag(e)) return;
+    e.preventDefault();
+    setDragOver(false);
+    const files = Array.from(e.dataTransfer.files || []).filter((f) => /\.(pdf|png|jpe?g)$/i.test(f.name));
+    if (!files.length) return;
+    setDroppedFiles(files);
+    setAddChargeOpen(true);
+  };
+
   return (
-    <div>
+    <div onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleFileDrop}>
       <div className="mb-4 rounded-lg border bg-slate-50/70 p-3">
         <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
@@ -526,24 +549,7 @@ export default function InvoiceLedger({ drawId }) {
             <CalendarClock className="w-4 h-4 mr-1" />
             {dating ? (dateProgress ? `Reading dates ${dateProgress}` : "Reading dates...") : "Get Invoice Dates"}
           </Button>
-          <div
-            onDragOver={(e) => {
-              e.preventDefault();
-              setDragOver(true);
-            }}
-            onDragLeave={() => setDragOver(false)}
-            onDrop={(e) => {
-              e.preventDefault();
-              setDragOver(false);
-              const files = Array.from(e.dataTransfer.files || []).filter((f) =>
-                /\.(pdf|png|jpe?g)$/i.test(f.name),
-              );
-              if (!files.length) return;
-              setDroppedFiles(files);
-              setAddChargeOpen(true);
-            }}
-            className="rounded-md"
-          >
+          <div className="rounded-md">
             <Button
               size="sm"
               onClick={() => setAddChargeOpen(true)}

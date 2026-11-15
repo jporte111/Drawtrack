@@ -59,11 +59,13 @@ export default function AddInvoiceDialog({ open, onOpenChange, drawVendorId, dra
     enabled: !!drawCycle?.client_id && open,
   });
 
+  // Every master vendor is matchable, so dropped invoices resolve the same way for every client.
   const vendorOptions = useMemo(() => {
     const clientIds = new Set(clientVendors.map((cv) => cv.vendor_id));
     const map = new Map();
     vendors
-      .filter((v) => clientIds.has(v.id))
+      .filter((v) => v.status !== "inactive")
+      .sort((a, b) => (clientIds.has(b.id) ? 1 : 0) - (clientIds.has(a.id) ? 1 : 0))
       .forEach((v) => map.set(v.id, { id: v.id, name: v.name }));
     drawVendors.forEach((dv) => {
       const master = vendors.find((v) => v.id === dv.vendor_id);
