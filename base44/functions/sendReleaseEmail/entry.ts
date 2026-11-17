@@ -1,7 +1,8 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.54';
 import { collectEmails, formatMoney, graphRequest, toBase64 } from "../../shared/outlookMail.ts";
 
-const CC_EMAIL = "jose@jlmdevelopmentinc.com";
+// Always copied on every release email.
+const CC_EMAILS = ["jose@jlmdevelopmentinc.com", "christina@namasteresources.com"];
 // Single configurable sender. Leave blank to send from the connected Outlook mailbox.
 const SENDER_OVERRIDE = "";
 const RELEASE_TYPES = ["conditional_lien_release", "unconditional_lien_release"];
@@ -82,7 +83,7 @@ export default async function(req) {
         ...contacts.map((c) => c.email),
         ...(Array.isArray(extra_recipients) ? extra_recipients : []),
       ],
-      { exclude: [CC_EMAIL] },
+      { exclude: CC_EMAILS },
     );
 
     if (recipients.length === 0) {
@@ -120,7 +121,7 @@ export default async function(req) {
     const emailBody = bodyLines.join("\n");
 
     const attachmentName = `${releaseKind}_Waiver_and_Release_${vendorName.replace(/[^A-Za-z0-9]+/g, "_")}.pdf`;
-    const cc = [CC_EMAIL];
+    const cc = [...CC_EMAILS];
 
     // Sender = SENDER_OVERRIDE when set, otherwise the connected mailbox
     let sender = SENDER_OVERRIDE;
