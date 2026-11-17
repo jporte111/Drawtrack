@@ -108,7 +108,12 @@ export default function InvoiceLedger({ drawId }) {
       } else if (d.document_type === "conditional_lien_release") {
         if (d.related_invoice_document_id) condByInvoice[d.related_invoice_document_id] = d;
         else condByDV[d.draw_vendor_id] = d;
-      } else if (d.document_type === "unconditional_lien_release" && d.client_vendor_id) {
+      }
+    }
+    // Unconditional releases belong to the client vendor (one per vendor), not to a single draw.
+    const cvIdsForUncond = new Set(clientVendors.map((cv) => cv.id));
+    for (const d of allDocs) {
+      if (d.document_type === "unconditional_lien_release" && cvIdsForUncond.has(d.client_vendor_id)) {
         uncondByCV[d.client_vendor_id] = d;
       }
     }
