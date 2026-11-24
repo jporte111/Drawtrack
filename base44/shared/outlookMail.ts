@@ -1,7 +1,9 @@
 export const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export function formatMoney(value) {
-  const n = Number(value);
+  if (value == null || value === "") return "";
+  // Tolerates values stored as strings with symbols or separators.
+  const n = typeof value === "number" ? value : Number(String(value).replace(/[^0-9.-]/g, ""));
   if (!isFinite(n)) return "";
   return n.toLocaleString("en-US", { style: "currency", currency: "USD" });
 }

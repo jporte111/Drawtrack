@@ -1,7 +1,47 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.54';
-import { collectEmails, formatDateValue, formatMoney, graphRequest } from "../../shared/outlookMail.ts";
+import { collectEmails, formatDateValue, formatMoney, graphRequest, toBase64 } from "../../shared/outlookMail.ts";
 
 const COMPANY = "JLM Development Inc.";
+const LOGO_URL =
+  "https://media.base44.com/images/public/6a5e7a0a5cbf866d6d105ac4/74cfe58c3_logo.png";
+
+// Outlook's sendMail accepts roughly 4 MB per message, attachments included.
+const MAX_ATTACH_BYTES = 2800000;
+
+const CONTENT_TYPES: Record<string, string> = {
+  pdf: "application/pdf",
+  png: "image/png",
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  gif: "image/gif",
+  webp: "image/webp",
+  heic: "image/heic",
+  csv: "text/csv",
+  txt: "text/plain",
+  xls: "application/vnd.ms-excel",
+  xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  doc: "application/msword",
+  docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+};
+
+function asList(result: any) {
+  if (!result) return [];
+  return Array.isArray(result) ? result : result.items || [];
+}
+
+function extFromUrl(url: string) {
+  const match = String(url || "").split("?")[0].match(/\.([A-Za-z0-9]{2,5})$/);
+  return match ? match[1].toLowerCase() : "pdf";
+}
+
+function attachmentName(label: string, ext: string) {
+  const base = String(label || "attachment")
+    .replace(/\.[A-Za-z0-9]{2,5}$/, "")
+    .replace(/[^A-Za-z0-9 ._-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  return `${base || "attachment"}.${ext}`;
+}
 
 function esc(value) {
   return String(value == null ? "" : value).replace(/[&<>"]/g, (c) => (
@@ -35,8 +75,17 @@ function buildHtml(invoice, client, links, note) {
     <table width="100%" cellpadding="0" cellspacing="0" style="max-width:640px;margin:0 auto;background:#ffffff;border:1px solid #e5e7eb;border-radius:6px;">
       <tr>
         <td style="padding:24px;border-bottom:1px solid #e5e7eb;">
-          <div style="font-size:18px;font-weight:bold;color:#0f172a;">${COMPANY}</div>
-          <div style="font-size:13px;color:#64748b;margin-top:2px;">Invoice ${esc(invoice.invoice_number)}</div>
+          <table cellpadding="0" cellspacing="0" border="0">
+            <tr>
+              <td style="padding-right:12px;vertical-align:middle;">
+                <img src="${LOGO_URL}" alt="JLM Development Inc." height="38" style="height:38px;display:block;border:0;" />
+              </td>
+              <td style="vertical-align:middle;">
+                <div style="font-size:18px;font-weight:bold;color:#0f172a;">${COMPANY}</div>
+                <div style="font-size:13px;color:#64748b;margin-top:2px;">Invoice ${esc(invoice.invoice_number)}</div>
+              </td>
+            </tr>
+          </table>
         </td>
         <td style="padding:24px;border-bottom:1px solid #e5e7eb;text-align:right;font-size:13px;color:#64748b;">
           ${invoice.invoice_date ? `<div>Date: ${formatDateValue(invoice.invoice_date)}</div>` : ""}
@@ -173,12 +222,87 @@ export default async function (req) {
     const html = buildHtml(invoice, client, { invoiceUrl, payUrl }, note);
     const text = buildText(invoice, client, { invoiceUrl, payUrl }, note);
 
+    const attachments: any[] = [];
+    const attachedNames: string[] = [];
+    const skipped: string[] = [];
+    let attachedBytes = 0;
+
+    const addAttachment = async (url: string, name: string, contentType: string) => {
+      try {
+        const fileRes = await fetch(url, { signal: AbortSignal.timeout(30000) });
+        if (!fileRes.ok) {
+          skipped.push(name);
+          return;
+        }
+        const bytes = new Uint8Array(await fileRes.arrayBuffer());
+        if (attachedBytes + bytes.byteLength > MAX_ATTACH_BYTES) {
+          skipped.push(name);
+          return;
+        }
+        attachedBytes += bytes.byteLength;
+        attachments.push({
+          "@odata.type": "#microsoft.graph.fileAttachment",
+          name,
+          contentType,
+          contentBytes: toBase64(bytes),
+        });
+        attachedNames.push(name);
+      } catch {
+        skipped.push(name);
+      }
+    };
+
+    // Every supporting vendor invoice filed against this draw.
+    if (invoice.draw_cycle_id) {
+      const drawVendors = asList(await base44.entities.DrawVendor.filter({ draw_cycle_id: invoice.draw_cycle_id }));
+      const dvIds = drawVendors.map((dv: any) => dv.id);
+      if (dvIds.length > 0) {
+        const [docs, vendors] = await Promise.all([
+          base44.entities.Document.filter({ draw_vendor_id: { $in: dvIds } }),
+          base44.entities.Vendor.list(),
+        ]);
+        const vendorNames = new Map(asList(vendors).map((v: any) => [v.id, v.name]));
+        const dvById = new Map(drawVendors.map((dv: any) => [dv.id, dv]));
+        const invoiceDocs = asList(docs)
+          .filter((d: any) => (d.document_type === "invoice" || d.document_type === "receipt") && d.file_url)
+          .sort((a: any, b: any) => String(a.invoice_number || "").localeCompare(String(b.invoice_number || "")));
+        for (const d of invoiceDocs as any[]) {
+          const dv: any = dvById.get(d.draw_vendor_id);
+          const vendor = vendorNames.get(dv?.vendor_id) || dv?.vendor_name || "Vendor";
+          const ext = extFromUrl(d.file_url);
+          const label = `${vendor}${d.invoice_number ? ` - Invoice ${d.invoice_number}` : ""}`;
+          await addAttachment(
+            d.file_url,
+            attachmentName(label, ext),
+            CONTENT_TYPES[ext] || "application/octet-stream",
+          );
+        }
+      }
+    }
+
+    // Budget progress report generated by the app and uploaded privately.
+    if (body.budget_report_uri) {
+      const reportName = attachmentName(body.budget_report_name || "Budget Progress Report", "pdf");
+      try {
+        const signed = await base44.asServiceRole.integrations.Core.CreateFileSignedUrl({
+          file_uri: body.budget_report_uri,
+          expires_in: 600,
+        });
+        const signedUrl = signed?.signed_url || signed?.data?.signed_url;
+        if (signedUrl) await addAttachment(signedUrl, reportName, "application/pdf");
+        else skipped.push(reportName);
+      } catch (error) {
+        skipped.push(reportName);
+      }
+    }
+
     try {
-      const message = {
+      const message: any = {
         subject,
         body: { contentType: "HTML", content: html },
         toRecipients: recipients.map((address) => ({ emailAddress: { address } })),
       };
+      if (attachments.length > 0) message.attachments = attachments;
       await graphRequest(accessToken, "/me/sendMail", {
         method: "POST",
         body: JSON.stringify({ message, saveToSentItems: true }),
@@ -197,7 +321,17 @@ export default async function (req) {
       approved_by: user.email || user.full_name || "",
     });
 
-    return Response.json({ ok: true, recipients, subject, text, invoice_url: invoiceUrl, sent_at: sentAt, sender });
+    return Response.json({
+      ok: true,
+      recipients,
+      subject,
+      text,
+      invoice_url: invoiceUrl,
+      sent_at: sentAt,
+      sender,
+      attachments: attachedNames,
+      skipped_attachments: skipped,
+    });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
   }

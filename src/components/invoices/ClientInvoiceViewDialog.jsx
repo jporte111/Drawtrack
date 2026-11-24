@@ -11,7 +11,8 @@ import { invoiceStatusConfig } from "@/lib/invoiceStatus";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { downloadInvoicePdf } from "@/lib/invoicePdf";
 import DrawPackageCheck from "./DrawPackageCheck";
-import { JLM_SENDER, STANDARD_NOTE } from "@/lib/invoiceEmail";
+import { JLM_SENDER, primaryFirstName, standardNote } from "@/lib/invoiceEmail";
+import { uploadBudgetProgressReport } from "@/lib/budgetProgressPdf";
 import { useToast } from "@/components/ui/use-toast";
 
 const REASON_MESSAGES = {
@@ -48,7 +49,7 @@ export default function ClientInvoiceViewDialog({ open, onOpenChange, invoice })
       return;
     }
     setSelected(emailable.filter((c) => c.receives_releases !== false).map((c) => c.email));
-    setNote(invoice?.email_note || STANDARD_NOTE);
+    setNote(invoice?.email_note || standardNote(primaryFirstName(contacts, invoice)));
     setApproved(false);
   }, [open, contacts.length]);
 
@@ -61,16 +62,35 @@ export default function ClientInvoiceViewDialog({ open, onOpenChange, invoice })
     setSending(true);
     setError("");
     try {
+      // The budget progress report is generated here and uploaded so the email can carry it.
+      let report = null;
+      if (invoice.client_id) {
+        try {
+          report = await uploadBudgetProgressReport({
+            clientId: invoice.client_id,
+            clientName: invoice.bill_to_name,
+            projectName: invoice.project_name,
+          });
+        } catch (e) {
+          report = null;
+        }
+      }
       const res = await base44.functions.invoke("sendClientInvoice", {
         invoice_id: invoice.id,
         recipients: selected,
         note,
         approved: approved === true,
+        budget_report_uri: report?.uri || "",
+        budget_report_name: report?.fileName || "",
       });
       const data = res.data || {};
       if (data.ok) {
+        const attached = Array.isArray(data.attachments) ? data.attachments : [];
         setSender(data.sender || "");
-        toast({ title: "Invoice sent", description: `Emailed to ${data.recipients.join(", ")}` });
+        toast({
+          title: "Invoice sent",
+          description: `Emailed to ${data.recipients.join(", ")} with ${attached.length} attachment${attached.length === 1 ? "" : "s"}`,
+        });
         queryClient.invalidateQueries({ queryKey: ["clientInvoices", invoice.draw_cycle_id] });
         queryClient.invalidateQueries({ queryKey: ["clientInvoices", "client", invoice.client_id] });
         onOpenChange(false);
@@ -171,13 +191,16 @@ export default function ClientInvoiceViewDialog({ open, onOpenChange, invoice })
             <ShieldCheck className="w-4 h-4 text-slate-400" />Review &amp; approve
           </div>
           <DrawPackageCheck drawCycleId={invoice.draw_cycle_id} />
+          <p className="text-xs text-slate-500">
+            The email carries the budget progress report plus every supporting invoice filed against this draw.
+          </p>
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium text-slate-600">Email note</span>
               <button
                 type="button"
                 className="text-xs text-blue-600 hover:underline"
-                onClick={() => setNote(STANDARD_NOTE)}
+                onClick={() => setNote(standardNote(primaryFirstName(contacts, invoice)))}
               >
                 Use standard message
               </button>
