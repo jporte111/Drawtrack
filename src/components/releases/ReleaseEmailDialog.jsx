@@ -141,9 +141,16 @@ export default function ReleaseEmailDialog({ open, onOpenChange, documentId, onS
                   </div>
                 </div>
 
-                <div className="border rounded-lg bg-slate-50 p-3 text-sm text-slate-700 whitespace-pre-wrap">
-                  {preview.body}
-                </div>
+                {preview.html ? (
+                  <div
+                    className="border rounded-lg bg-white max-h-[360px] overflow-y-auto"
+                    dangerouslySetInnerHTML={{ __html: preview.html }}
+                  />
+                ) : (
+                  <div className="border rounded-lg bg-slate-50 p-3 text-sm text-slate-700 whitespace-pre-wrap">
+                    {preview.body}
+                  </div>
+                )}
 
                 <div className="flex items-center justify-between gap-2 border rounded-lg px-3 py-2">
                   <div className="flex items-center gap-2 min-w-0">

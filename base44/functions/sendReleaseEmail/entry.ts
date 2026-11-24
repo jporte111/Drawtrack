@@ -1,6 +1,7 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.54';
 import { collectEmails, formatMoney, graphRequest, toBase64 } from "../../shared/outlookMail.ts";
 
+const LOGO_URL = "https://media.base44.com/images/public/6a5e7a0a5cbf866d6d105ac4/74cfe58c3_logo.png";
 // Always copied on every release email.
 const CC_EMAILS = ["jose@jlmdevelopmentinc.com", "christina@namasteresources.com"];
 // Single configurable sender. Leave blank to send from the connected Outlook mailbox.
@@ -95,32 +96,103 @@ export default async function(req) {
 
     const subject = `${clientName} - ${releaseKind} Waiver and Release - ${vendorName}${invoiceNumber ? ` - Invoice ${invoiceNumber}` : ""}`;
 
-    const bodyLines = [
-      "Hello,",
-      "",
+    const attachmentName = `${releaseKind}_Waiver_and_Release_${vendorName.replace(/[^A-Za-z0-9]+/g, "_")}.pdf`;
+
+    // Greet the person receiving the release by first name when we know who they are.
+    const primaryContact = contacts.find(
+      (c) => String(c.email || "").trim().toLowerCase() === String(recipients[0] || "").trim().toLowerCase(),
+    );
+    const greetingName = primaryContact?.name ? String(primaryContact.name).trim().split(/\s+/)[0] : "";
+    const greeting = greetingName ? `Hello ${greetingName},` : "Hello,";
+
+    const intro =
       `Attached is the ${releaseKind.toLowerCase()} waiver and release for ${vendorName}` +
-        (invoiceNumber ? `, invoice ${invoiceNumber}` : "") +
-        (netPaid != null ? ` in the amount of ${formatMoney(netPaid)}` : "") +
-        (drawCycleName ? `, for the draw cycle ${drawCycleName}.` : "."),
-    ];
-    if (retentionAmount > 0) {
-      bodyLines.push(
-        "",
-        `Invoice total: ${formatMoney(invoiceAmount)}. Retention withheld: ${formatMoney(retentionAmount)}. Net amount paid: ${formatMoney(netPaid)}.`,
-      );
-    }
-    if (clientName) bodyLines.push("", `Project: ${clientName}${drawCycle?.project_name ? ` - ${drawCycle.project_name}` : ""}`);
-    if (projectAddress) bodyLines.push(`Project address: ${projectAddress}`);
-    bodyLines.push(
+      (drawCycleName ? ` for the draw cycle ${drawCycleName}.` : ".");
+    const amountLine =
+      netPaid != null
+        ? `The net amount paid is ${formatMoney(netPaid)}` +
+          (retentionAmount > 0 && invoiceAmount != null
+            ? `, after ${formatMoney(retentionAmount)} retention was withheld from ${formatMoney(invoiceAmount)}.`
+            : ".")
+        : "";
+
+    const projectLine = `${clientName}${
+      drawCycle?.project_name && drawCycle.project_name !== clientName ? ` - ${drawCycle.project_name}` : ""
+    }`;
+    const detailRows = [
+      ["Vendor", vendorName],
+      ["Invoice number", invoiceNumber],
+      ["Invoice total", invoiceAmount != null ? formatMoney(invoiceAmount) : ""],
+      ["Retention withheld", retentionAmount > 0 ? formatMoney(retentionAmount) : ""],
+      ["Net amount paid", netPaid != null ? formatMoney(netPaid) : ""],
+      ["Project", projectLine],
+      ["Project address", projectAddress],
+      ["Draw cycle", drawCycleName],
+    ].filter((row) => row[1]);
+
+    const esc = (value) =>
+      String(value == null ? "" : value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+
+    const detailsHtml = detailRows.length
+      ? `<table width="100%" cellpadding="0" cellspacing="0" style="margin:18px 0 0;border:1px solid #e5e7eb;border-radius:6px;border-collapse:separate;overflow:hidden;">${detailRows
+          .map(
+            ([label, value], index) =>
+              `<tr${index === 0 ? ' style="background:#f8fafc;"' : ""}><td width="42%" style="padding:9px 12px;border-bottom:1px solid #eef2f7;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:#64748b;">${esc(
+                label,
+              )}</td><td style="padding:9px 12px;border-bottom:1px solid #eef2f7;font-size:13px;font-weight:bold;color:#0f172a;">${esc(
+                value,
+              )}</td></tr>`,
+          )
+          .join("")}</table>`
+      : "";
+
+    const html = `<div style="background:#f8fafc;padding:24px;font-family:Arial,Helvetica,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="max-width:640px;margin:0 auto;background:#ffffff;border:1px solid #e5e7eb;border-radius:6px;">
+    <tr>
+      <td style="padding:24px;border-bottom:1px solid #e5e7eb;">
+        <table width="100%" cellpadding="0" cellspacing="0"><tr>
+          <td style="padding-right:12px;vertical-align:middle;width:56px;"><img src="${LOGO_URL}" alt="JLM Development Inc." height="38" style="height:38px;display:block;border:0;" /></td>
+          <td style="vertical-align:middle;">
+            <div style="font-size:18px;font-weight:bold;color:#0f172a;">JLM Development Inc.</div>
+            <div style="font-size:13px;color:#64748b;margin-top:2px;">${releaseKind} Waiver and Release</div>
+          </td>
+        </tr></table>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding:24px;font-size:14px;line-height:1.6;color:#334155;">
+        <p style="margin:0 0 12px;">${esc(greeting)}</p>
+        <p style="margin:0 0 12px;">${esc(intro)}</p>
+        ${amountLine ? `<p style="margin:0;">${esc(amountLine)}</p>` : ""}
+        ${detailsHtml}
+        <p style="margin:18px 0 0;">Please review, sign, and return the release at your earliest convenience.</p>
+        <p style="margin:18px 0 0;">Thank you,<br />JLM Development Inc.</p>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding:16px 24px;border-top:1px solid #e5e7eb;font-size:12px;color:#64748b;">Attached: ${esc(attachmentName)}</td>
+    </tr>
+  </table>
+</div>`;
+
+    const bodyLines = [
+      greeting,
+      "",
+      intro,
+      ...(amountLine ? ["", amountLine] : []),
+      "",
+      ...detailRows.map(([label, value]) => `${label}: ${value}`),
       "",
       "Please review, sign, and return the release at your earliest convenience.",
       "",
       "Thank you,",
-      "JLM Development Inc."
-    );
+      "JLM Development Inc.",
+    ];
     const emailBody = bodyLines.join("\n");
-
-    const attachmentName = `${releaseKind}_Waiver_and_Release_${vendorName.replace(/[^A-Za-z0-9]+/g, "_")}.pdf`;
     const cc = [...CC_EMAILS];
 
     // Sender = SENDER_OVERRIDE when set, otherwise the connected mailbox
@@ -139,6 +211,7 @@ export default async function(req) {
       cc,
       subject,
       body: emailBody,
+      html,
       attachment_name: attachmentName,
       attachment_url: doc.file_url,
       sender,
@@ -187,7 +260,7 @@ export default async function(req) {
 
       const message = {
         subject,
-        body: { contentType: "Text", content: emailBody },
+        body: { contentType: "HTML", content: html },
         toRecipients: recipients.map((address) => ({ emailAddress: { address } })),
         ccRecipients: cc.map((address) => ({ emailAddress: { address } })),
         attachments: [
