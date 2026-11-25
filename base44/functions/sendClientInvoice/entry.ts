@@ -1,9 +1,7 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.54';
 import { collectEmails, formatDateValue, formatMoney, graphRequest, toBase64 } from "../../shared/outlookMail.ts";
 
-const COMPANY = "JLM Development Inc.";
-const LOGO_URL =
-  "https://media.base44.com/images/public/6a5e7a0a5cbf866d6d105ac4/74cfe58c3_logo.png";
+import { COMPANY, LOGO_URL } from "../../shared/emailBrand.ts";
 
 // Outlook's sendMail accepts roughly 4 MB per message, attachments included.
 const MAX_ATTACH_BYTES = 2800000;

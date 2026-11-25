@@ -1,7 +1,7 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.54';
 import { collectEmails, formatMoney, graphRequest, toBase64 } from "../../shared/outlookMail.ts";
 
-const LOGO_URL = "https://media.base44.com/images/public/6a5e7a0a5cbf866d6d105ac4/74cfe58c3_logo.png";
+import { LOGO_URL } from "../../shared/emailBrand.ts";
 // Always copied on every release email.
 const CC_EMAILS = ["jose@jlmdevelopmentinc.com", "christina@namasteresources.com"];
 // Single configurable sender. Leave blank to send from the connected Outlook mailbox.
