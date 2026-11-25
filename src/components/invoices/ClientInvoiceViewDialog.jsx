@@ -37,6 +37,7 @@ export default function ClientInvoiceViewDialog({ open, onOpenChange, invoice })
     queryKey: ["clientContacts", invoice?.client_id],
     queryFn: () => base44.entities.ClientContact.filter({ client_id: invoice.client_id, active: true }),
     enabled: open && !!invoice?.client_id,
+    select: (result) => (Array.isArray(result) ? result : result.items || []),
   });
 
   const emailable = contacts.filter((c) => c.email && String(c.email).includes("@"));

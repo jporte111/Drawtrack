@@ -108,6 +108,7 @@ export default function ClientInvoiceDialog({ open, onOpenChange, drawId, invoic
     queryKey: ["clientContacts", draw?.client_id],
     queryFn: () => base44.entities.ClientContact.filter({ client_id: draw.client_id, active: true }),
     enabled: open && !!draw?.client_id,
+    select: (result) => (Array.isArray(result) ? result : result.items || []),
   });
 
   const billingEmail = (contacts.find((c) => c.email && c.receives_releases !== false) || {}).email || "";
