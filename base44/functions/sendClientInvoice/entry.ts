@@ -76,7 +76,7 @@ function buildHtml(invoice, client, links, note) {
           <table cellpadding="0" cellspacing="0" border="0">
             <tr>
               <td style="padding-right:12px;vertical-align:middle;">
-                <img src="${LOGO_URL}" alt="JLM Development Inc." height="38" style="height:38px;display:block;border:0;" />
+                <img src="${LOGO_URL}" alt="JLM Development Inc." height="44" style="height:44px;width:auto;display:block;border:0;" />
               </td>
               <td style="vertical-align:middle;">
                 <div style="font-size:18px;font-weight:bold;color:#0f172a;">${COMPANY}</div>

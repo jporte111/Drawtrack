@@ -3,7 +3,7 @@ export const JLM_SENDER = "JLM@namastefinancialmgmt.com";
 
 // Public JLM mark, used in the invoice email and on generated PDFs.
 export const JLM_LOGO_URL =
-  "https://media.base44.com/images/public/6a5e7a0a5cbf866d6d105ac4/74cfe58c3_logo.png";
+  "https://media.base44.com/images/public/6a5e7a0a5cbf866d6d105ac4/b6abab716da4ae93c448a4922b08af69_JLM-logo-email.png";
 
 // First name of the person the invoice is addressed to: the client contact
 // marked as owner, else the first named contact, else the bill-to name.

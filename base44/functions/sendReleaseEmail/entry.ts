@@ -155,7 +155,7 @@ export default async function(req) {
     <tr>
       <td style="padding:24px;border-bottom:1px solid #e5e7eb;">
         <table width="100%" cellpadding="0" cellspacing="0"><tr>
-          <td style="padding-right:12px;vertical-align:middle;width:56px;"><img src="${LOGO_URL}" alt="JLM Development Inc." height="38" style="height:38px;display:block;border:0;" /></td>
+          <td style="padding-right:14px;vertical-align:middle;white-space:nowrap;"><img src="${LOGO_URL}" alt="JLM Development Inc." height="44" style="height:44px;width:auto;display:block;border:0;" /></td>
           <td style="vertical-align:middle;">
             <div style="font-size:18px;font-weight:bold;color:#0f172a;">JLM Development Inc.</div>
             <div style="font-size:13px;color:#64748b;margin-top:2px;">${releaseKind} Waiver and Release</div>
